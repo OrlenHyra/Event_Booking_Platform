@@ -1,5 +1,8 @@
 package com.Final_Project.Event_Booking.service.impl;
 
+import com.Final_Project.Event_Booking.exception.custom.EmailAlreadyExistsException;
+import com.Final_Project.Event_Booking.exception.custom.UserNotFoundException;
+import com.Final_Project.Event_Booking.exception.custom.UsernameAlreadyExistsException;
 import com.Final_Project.Event_Booking.model.dto.request.UserRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.User;
@@ -22,10 +25,10 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDTO createUser(UserRequestDTO request) {
         if(userRepository.existsByUsername(request.getUsername())){
-            throw new IllegalArgumentException("Username already exists");
+            throw new UsernameAlreadyExistsException("Username already exists");
         }
         if(userRepository.existsByEmail(request.getEmail())){
-            throw new IllegalArgumentException("Email already exists");
+            throw new EmailAlreadyExistsException("Email already exists");
         }
         User user = userMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
@@ -44,16 +47,16 @@ public class UserServiceImpl implements UserService {
     @Override
     public UserResponseDTO updateUser(Long id, UserRequestDTO request) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
 
         if (!user.getUsername().equals(request.getUsername())
                 && userRepository.existsByUsername(request.getUsername())) {
-            throw new IllegalArgumentException("Username already exists");
+            throw new UsernameAlreadyExistsException("Username already exists");
         }
 
         if (!user.getEmail().equals(request.getEmail())
                 && userRepository.existsByEmail(request.getEmail())) {
-            throw new IllegalArgumentException("Email already exists");
+            throw new EmailAlreadyExistsException("Email already exists");
         }
 
         userMapper.updateEntity(request, user);
@@ -70,7 +73,7 @@ public class UserServiceImpl implements UserService {
     @Override
     public void deleteUser(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(()->new IllegalArgumentException("User not found!"));
+                .orElseThrow(()->new UserNotFoundException("User not found!"));
         userRepository.delete(user);
     }
 

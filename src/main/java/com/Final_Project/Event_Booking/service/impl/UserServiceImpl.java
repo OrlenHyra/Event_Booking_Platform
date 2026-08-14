@@ -1,0 +1,77 @@
+package com.Final_Project.Event_Booking.service.impl;
+
+import com.Final_Project.Event_Booking.model.dto.request.UserRequestDTO;
+import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
+import com.Final_Project.Event_Booking.model.entity.User;
+import com.Final_Project.Event_Booking.model.mapper.UserMapper;
+import com.Final_Project.Event_Booking.repository.UserRepository;
+import com.Final_Project.Event_Booking.service.UserService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.util.List;
+
+@Service
+@RequiredArgsConstructor
+public class UserServiceImpl implements UserService {
+    private final UserRepository userRepository;
+    private final UserMapper userMapper;
+    private final PasswordEncoder passwordEncoder;
+
+    @Override
+    public UserResponseDTO createUser(UserRequestDTO request) {
+        if(userRepository.existsByUsername(request.getUsername())){
+            throw new IllegalArgumentException("Username already exists");
+        }
+        if(userRepository.existsByEmail(request.getEmail())){
+            throw new IllegalArgumentException("Email already exists");
+        }
+        User user = userMapper.toEntity(request);
+        user.setPassword(passwordEncoder.encode(request.getPassword()));
+        User savedUser=userRepository.save(user);
+        return userMapper.toResponseDTO(savedUser);
+    }
+
+    @Override
+    public List<UserResponseDTO> getAllUsers() {
+        return userRepository.findAll()
+                .stream()
+                .map(userMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Override
+    public UserResponseDTO updateUser(Long id, UserRequestDTO request) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("User not found"));
+
+        if (!user.getUsername().equals(request.getUsername())
+                && userRepository.existsByUsername(request.getUsername())) {
+            throw new IllegalArgumentException("Username already exists");
+        }
+
+        if (!user.getEmail().equals(request.getEmail())
+                && userRepository.existsByEmail(request.getEmail())) {
+            throw new IllegalArgumentException("Email already exists");
+        }
+
+        userMapper.updateEntity(request, user);
+
+        if (request.getPassword() != null && !request.getPassword().isBlank()) {
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
+        }
+
+        User updatedUser = userRepository.save(user);
+
+        return userMapper.toResponseDTO(updatedUser);
+    }
+
+    @Override
+    public void deleteUser(Long id) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->new IllegalArgumentException("User not found!"));
+        userRepository.delete(user);
+    }
+
+}

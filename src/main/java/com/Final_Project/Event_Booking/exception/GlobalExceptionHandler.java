@@ -1,6 +1,7 @@
 package com.Final_Project.Event_Booking.exception;
 
 import com.Final_Project.Event_Booking.exception.custom.EmailAlreadyExistsException;
+import com.Final_Project.Event_Booking.exception.custom.InvalidRoleException;
 import com.Final_Project.Event_Booking.exception.custom.UserNotFoundException;
 import com.Final_Project.Event_Booking.exception.custom.UsernameAlreadyExistsException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -74,4 +75,21 @@ public class GlobalExceptionHandler {
                 .status(HttpStatus.NOT_FOUND)
                 .body(body);
     }
+
+    @ExceptionHandler(InvalidRoleException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidRole(InvalidRoleException ex, HttpServletRequest request) {
+
+        ErrorResponse body = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(body);
+    }
+
 }

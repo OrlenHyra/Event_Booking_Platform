@@ -1,4 +1,4 @@
-package com.Final_Project.Event_Booking.security;
+package com.Final_Project.Event_Booking.security.jwt;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;

@@ -3,7 +3,7 @@ package com.Final_Project.Event_Booking.service.impl;
 import com.Final_Project.Event_Booking.model.dto.request.LoginRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.AuthResponseDTO;
 import com.Final_Project.Event_Booking.model.enums.UserRole;
-import com.Final_Project.Event_Booking.security.JwtService;
+import com.Final_Project.Event_Booking.security.jwt.JwtService;
 import com.Final_Project.Event_Booking.service.AuthService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.authentication.AuthenticationManager;

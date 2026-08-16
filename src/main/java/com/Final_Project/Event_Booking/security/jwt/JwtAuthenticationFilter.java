@@ -1,4 +1,4 @@
-package com.Final_Project.Event_Booking.security;
+package com.Final_Project.Event_Booking.security.jwt;
 
 import io.jsonwebtoken.JwtException;
 import jakarta.servlet.FilterChain;

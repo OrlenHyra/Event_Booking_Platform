@@ -1,7 +1,9 @@
 package com.Final_Project.Event_Booking.controller;
 
 import com.Final_Project.Event_Booking.model.dto.request.LoginRequestDTO;
+import com.Final_Project.Event_Booking.model.dto.request.RegisterRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.AuthResponseDTO;
+import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
 import com.Final_Project.Event_Booking.service.AuthService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -25,5 +27,14 @@ public class AuthController {
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(authService.login(request));
+    }
+
+    @PostMapping("/register")
+    public ResponseEntity<UserResponseDTO> register(
+            @Valid @RequestBody RegisterRequestDTO request
+    ){
+        return ResponseEntity
+                .status(HttpStatus.CREATED)
+                .body(authService.register(request));
     }
 }

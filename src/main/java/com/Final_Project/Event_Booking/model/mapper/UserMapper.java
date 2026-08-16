@@ -1,5 +1,6 @@
 package com.Final_Project.Event_Booking.model.mapper;
 
+import com.Final_Project.Event_Booking.model.dto.request.RegisterRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.request.UserRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.User;
@@ -18,4 +19,8 @@ public interface UserMapper {
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "password", ignore = true)
     void updateEntity(UserRequestDTO request, @MappingTarget User user);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "role", ignore = true)
+    User toEntity(RegisterRequestDTO request);
 }

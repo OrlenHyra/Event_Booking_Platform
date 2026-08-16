@@ -2,6 +2,7 @@ package com.Final_Project.Event_Booking.controller;
 
 import com.Final_Project.Event_Booking.model.dto.request.UserRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
+import com.Final_Project.Event_Booking.model.enums.UserRole;
 import com.Final_Project.Event_Booking.service.UserService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -55,5 +56,16 @@ public class UserController {
     ){
         userService.deleteUser(userId);
         return ResponseEntity.noContent().build();
+    }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{userId}/role")
+    public ResponseEntity<UserResponseDTO> updateRole(
+            @PathVariable Long userId,
+            @RequestParam UserRole role
+            ){
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(userService.updateRole(userId, role));
     }
 }

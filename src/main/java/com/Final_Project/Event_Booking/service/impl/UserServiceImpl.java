@@ -1,11 +1,13 @@
 package com.Final_Project.Event_Booking.service.impl;
 
 import com.Final_Project.Event_Booking.exception.custom.EmailAlreadyExistsException;
+import com.Final_Project.Event_Booking.exception.custom.InvalidRoleException;
 import com.Final_Project.Event_Booking.exception.custom.UserNotFoundException;
 import com.Final_Project.Event_Booking.exception.custom.UsernameAlreadyExistsException;
 import com.Final_Project.Event_Booking.model.dto.request.UserRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.User;
+import com.Final_Project.Event_Booking.model.enums.UserRole;
 import com.Final_Project.Event_Booking.model.mapper.UserMapper;
 import com.Final_Project.Event_Booking.repository.UserRepository;
 import com.Final_Project.Event_Booking.service.UserService;
@@ -77,4 +79,15 @@ public class UserServiceImpl implements UserService {
         userRepository.delete(user);
     }
 
+    @Override
+    public UserResponseDTO updateRole(Long id, UserRole role) {
+        User user = userRepository.findById(id)
+                .orElseThrow(()->new UserNotFoundException("User with id:"+id+" not found!"));
+        if (role == UserRole.ADMIN) {
+            throw new InvalidRoleException("Basic users cannot be assigned the ADMIN role.");
+        }
+        user.setRole(role);
+        User updatedUser=userRepository.save(user);
+        return userMapper.toResponseDTO(updatedUser);
+    }
 }

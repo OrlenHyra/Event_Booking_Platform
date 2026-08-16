@@ -4,6 +4,9 @@ import com.Final_Project.Event_Booking.model.enums.UserRole;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Entity
 @Table(name = "users")
 @Getter
@@ -29,4 +32,13 @@ public class User {
     @Column(name = "role",nullable = false)
     @Enumerated(EnumType.STRING)
     private UserRole role;
+
+    @OneToMany(mappedBy = "organizer")
+    private List<Event> events=new ArrayList<>();
+
+    @OneToMany(mappedBy = "booker")
+    private List<Booking> bookings=new ArrayList<>();
+
+    @OneToMany(mappedBy = "reviewer")
+    private List<Review> reviews=new ArrayList<>();
 }

@@ -1,9 +1,6 @@
 package com.Final_Project.Event_Booking.exception;
 
-import com.Final_Project.Event_Booking.exception.custom.EmailAlreadyExistsException;
-import com.Final_Project.Event_Booking.exception.custom.InvalidRoleException;
-import com.Final_Project.Event_Booking.exception.custom.UserNotFoundException;
-import com.Final_Project.Event_Booking.exception.custom.UsernameAlreadyExistsException;
+import com.Final_Project.Event_Booking.exception.custom.*;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -89,6 +86,22 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity
                 .status(HttpStatus.BAD_REQUEST)
+                .body(body);
+    }
+
+    @ExceptionHandler(ResourcesNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleNotFound(ResourcesNotFoundException ex, HttpServletRequest request) {
+
+        ErrorResponse body = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.NOT_FOUND.value())
+                .error(HttpStatus.NOT_FOUND.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.NOT_FOUND)
                 .body(body);
     }
 

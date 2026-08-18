@@ -6,12 +6,14 @@ import com.Final_Project.Event_Booking.exception.custom.UserNotFoundException;
 import com.Final_Project.Event_Booking.exception.custom.UsernameAlreadyExistsException;
 import com.Final_Project.Event_Booking.model.dto.request.UserRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.UserResponseDTO;
+import com.Final_Project.Event_Booking.model.entity.Event;
 import com.Final_Project.Event_Booking.model.entity.User;
 import com.Final_Project.Event_Booking.model.enums.UserRole;
 import com.Final_Project.Event_Booking.model.mapper.UserMapper;
 import com.Final_Project.Event_Booking.repository.UserRepository;
 import com.Final_Project.Event_Booking.service.UserService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -89,5 +91,24 @@ public class UserServiceImpl implements UserService {
         user.setRole(role);
         User updatedUser=userRepository.save(user);
         return userMapper.toResponseDTO(updatedUser);
+    }
+
+    @Override
+    public User getCurrentUser() {
+        String username = SecurityContextHolder.getContext()
+                .getAuthentication()
+                .getName();
+
+        return userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new UserNotFoundException(
+                                "User with username:" + username + " not found!"
+                        ));
+    }
+
+    @Override
+    public boolean isCurrentUserOwner(Event event) {
+        User currentUser = getCurrentUser();
+        return event.getOrganizer().getId().equals(currentUser.getId());
     }
 }

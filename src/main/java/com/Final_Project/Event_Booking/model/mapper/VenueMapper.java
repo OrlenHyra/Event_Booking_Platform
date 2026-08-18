@@ -16,5 +16,5 @@ public interface VenueMapper {
     VenueResponseDTO toResponseDTO(Venue venue);
 
     @Mapping(target = "id",ignore = true)
-    Venue updateEntity(VenueRequestDTO request, @MappingTarget Venue venue);
+    void updateEntity(VenueRequestDTO request, @MappingTarget Venue venue);
 }

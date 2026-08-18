@@ -2,9 +2,11 @@ package com.Final_Project.Event_Booking.model.dto.response;
 
 import lombok.*;
 
-@Builder
-@AllArgsConstructor
 @Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 public class VenueResponseDTO {
 
     private Long id;

@@ -1,0 +1,32 @@
+package com.Final_Project.Event_Booking.model.mapper;
+
+import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
+import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
+import com.Final_Project.Event_Booking.model.entity.Booking;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
+
+@Mapper(componentModel = "spring")
+public interface BookingMapper {
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "event", ignore = true)
+    @Mapping(target = "booker", ignore = true)
+    @Mapping(target = "bookingDate", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    Booking toEntity(BookingRequestDTO request);
+
+    @Mapping(source = "event.id", target = "eventId")
+    @Mapping(source = "event.title", target = "eventTitle")
+    @Mapping(source = "booker.id", target = "userId")
+    @Mapping(source = "booker.username", target = "username")
+    BookingResponseDTO toResponseDTO(Booking booking);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "event", ignore = true)
+    @Mapping(target = "booker", ignore = true)
+    @Mapping(target = "bookingDate", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    void updateEntity(BookingRequestDTO request, @MappingTarget Booking booking);
+}

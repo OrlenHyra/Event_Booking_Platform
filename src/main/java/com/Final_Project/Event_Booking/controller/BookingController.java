@@ -58,10 +58,10 @@ public class BookingController {
 
     @DeleteMapping("/{bookingId}")
     @PreAuthorize("hasAnyRole('ATTENDEE', 'ADMIN')")
-    public ResponseEntity<Void> deleteBooking(
+    public ResponseEntity<Void> cancelBooking(
             @PathVariable Long bookingId
     ) {
-        bookingService.deleteBooking(bookingId);
+        bookingService.cancelBooking(bookingId);
         return ResponseEntity.noContent().build();
     }
 }

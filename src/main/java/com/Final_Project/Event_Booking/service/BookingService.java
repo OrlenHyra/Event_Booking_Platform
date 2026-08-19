@@ -15,5 +15,5 @@ public interface BookingService {
 
     BookingResponseDTO updateBooking(Long id, BookingRequestDTO request);
 
-    void deleteBooking(Long id);
+    void cancelBooking(Long id);
 }

@@ -69,6 +69,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponseDTO> getAllBookings() {
+        User user=userService.getCurrentUser();
         return bookingRepository.findAll()
                 .stream()
                 .map(bookingMapper::toResponseDTO)
@@ -115,9 +116,21 @@ public class BookingServiceImpl implements BookingService {
     }
 
     @Override
-    public void deleteBooking(Long id) {
+    @Transactional
+    public void cancelBooking(Long id) {
         Booking booking=bookingRepository.findById(id)
                 .orElseThrow(()->new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
-        bookingRepository.delete(booking);
+        User user = userService.getCurrentUser();
+        if (!booking.getBooker().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You are not allowed to cancel this booking!");
+        }
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new BusinessRuleException("Only confirmed bookings can be cancelled!");
+        }
+        Event event = booking.getEvent();
+        event.setAvailableSeats(event.getAvailableSeats() + booking.getSeatsBooked());
+        booking.setStatus(BookingStatus.CANCELLED);
+        eventRepository.save(event);
+        bookingRepository.save(booking);
     }
 }

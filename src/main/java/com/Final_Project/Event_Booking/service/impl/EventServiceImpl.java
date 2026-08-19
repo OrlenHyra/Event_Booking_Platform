@@ -18,8 +18,14 @@ import com.Final_Project.Event_Booking.service.EventService;
 import com.Final_Project.Event_Booking.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Page;
 
 import org.springframework.security.access.AccessDeniedException;
+
+import java.awt.print.Pageable;
+import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -123,5 +129,56 @@ public class EventServiceImpl implements EventService {
         Event event=eventRepository.findById(id)
                 .orElseThrow(()->new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
         eventRepository.delete(event);
+    }
+
+    @Override
+    public Page<EventResponseDTO> getEventsByCategory(String categoryName, Pageable pageable) {
+        Page<Event> events=eventRepository.findByStatusInAndCategories_Name(
+                List.of(
+                        EventStatus.ACTIVE,
+                        EventStatus.COMPLETED,
+                        EventStatus.UPCOMING
+                ),
+                categoryName,
+                pageable
+        );
+        return events.map(eventMapper::toResponseDTO);
+    }
+
+    @Override
+    public Page<EventResponseDTO> getEventsByCity(String cityName,Pageable pageable) {
+        Page<Event> events=eventRepository.findByStatusInAndVenue_City(
+                List.of(
+                        EventStatus.ACTIVE,
+                        EventStatus.COMPLETED,
+                        EventStatus.UPCOMING
+                ),
+                cityName,
+                pageable
+        );
+        return events.map(eventMapper::toResponseDTO);
+    }
+
+    @Override
+    public Page<EventResponseDTO> filterByDateRange(LocalDateTime startDateTime, LocalDateTime endDateTime,Pageable pageable) {
+        Page<Event> events=eventRepository.findEventByDateRange(
+                List.of(
+                        EventStatus.ACTIVE,
+                        EventStatus.COMPLETED,
+                        EventStatus.UPCOMING
+                ),
+                startDateTime,
+                endDateTime,
+                pageable
+        );
+        return events.map(eventMapper::toResponseDTO);
+    }
+
+    @Override
+    public Page<EventResponseDTO> filterByPriceRange(BigDecimal minPrice, BigDecimal maxPrice,Pageable pageable) {
+        Page<Event> events =eventRepository.findEventByPriceRange(
+                minPrice,maxPrice,pageable
+        );
+        return events.map(eventMapper::toResponseDTO);
     }
 }

@@ -1,5 +1,6 @@
 package com.Final_Project.Event_Booking.service.impl;
 
+import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
 import com.Final_Project.Event_Booking.model.dto.request.ReviewRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.ReviewResponseDTO;
@@ -39,7 +40,7 @@ public class ReviewServiceImpl implements ReviewService {
         Event event=eventRepository.findById(request.getEventId())
                 .orElseThrow(()->new ResourcesNotFoundException("Event with id:"+request.getEventId()+" is not found"));
         if(!LocalDateTime.now().isAfter(event.getEndDateTime())){
-            throw new IllegalArgumentException("Cant review an event if it has not ended yet.");
+            throw new BusinessRuleException("Cant review an event if it has not ended yet.");
         }
         boolean hasBooking=bookingRepository.existsByBooker_IdAndEvent_IdAndStatus(
                 user.getId(),
@@ -47,14 +48,14 @@ public class ReviewServiceImpl implements ReviewService {
                 BookingStatus.CONFIRMED
         );
         if(!hasBooking){
-            throw new IllegalArgumentException("Cant review an event if you dont have a booking!");
+            throw new BusinessRuleException("Cant review an event if you dont have a booking!");
         }
         boolean isReviewed=reviewRepository.existsByReviewer_IdAndEvent_Id(
                 user.getId(),
                 event.getId()
         );
         if(isReviewed){
-            throw new IllegalArgumentException("Cant review an event that you already reviewed before!");
+            throw new BusinessRuleException("Cant review an event that you already reviewed before!");
         }
         Review review=reviewMapper.toEntity(request);
         review.setReviewer(user);
@@ -87,7 +88,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(()->new ResourcesNotFoundException("Review with id:"+id+" is not found!"));
         User user=userService.getCurrentUser();
         if(!review.getReviewer().getId().equals(user.getId())){
-            throw new IllegalArgumentException(("You are not allowed to update this review!"));
+            throw new BusinessRuleException(("You are not allowed to update this review!"));
         }
         reviewMapper.updateEntity(request,review);
         Review updatedReview=reviewRepository.save(review);
@@ -100,7 +101,7 @@ public class ReviewServiceImpl implements ReviewService {
                 .orElseThrow(()->new ResourcesNotFoundException("Review with id:"+id+" is not found!"));
         User user=userService.getCurrentUser();
         if(!review.getReviewer().getId().equals(user.getId())){
-            throw new IllegalArgumentException(("You are not allowed to delete this review!"));
+            throw new BusinessRuleException(("You are not allowed to delete this review!"));
         }
         reviewRepository.delete(review);
     }

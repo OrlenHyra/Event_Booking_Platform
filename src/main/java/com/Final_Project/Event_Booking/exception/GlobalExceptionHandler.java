@@ -121,4 +121,20 @@ public class GlobalExceptionHandler {
                 .body(body);
     }
 
+    @ExceptionHandler(BusinessRuleException.class)
+    public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex, HttpServletRequest request) {
+
+        ErrorResponse body = ErrorResponse.builder()
+                .timestamp(LocalDateTime.now())
+                .status(HttpStatus.BAD_REQUEST.value())
+                .error(HttpStatus.BAD_REQUEST.getReasonPhrase())
+                .message(ex.getMessage())
+                .path(request.getRequestURI())
+                .build();
+
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(body);
+    }
+
 }

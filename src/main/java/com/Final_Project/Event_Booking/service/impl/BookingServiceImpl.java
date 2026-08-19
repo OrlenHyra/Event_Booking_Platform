@@ -1,5 +1,6 @@
 package com.Final_Project.Event_Booking.service.impl;
 
+import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
 import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
@@ -37,15 +38,15 @@ public class BookingServiceImpl implements BookingService {
         Event event=eventRepository.findById(request.getEventId())
                 .orElseThrow(()->new ResourcesNotFoundException(("Event with id:"+request.getEventId()+" is not found!")));
         if (event.getStatus() != EventStatus.UPCOMING) {
-            throw new IllegalArgumentException("Bookings are only allowed for upcoming events!");
+            throw new BusinessRuleException("Bookings are only allowed for upcoming events!");
         }
 
         if (!LocalDateTime.now().isBefore(event.getStartDateTime())) {
-            throw new IllegalArgumentException("The event has already started!");
+            throw new BusinessRuleException("The event has already started!");
         }
 
         if (request.getSeatsBooked() > event.getAvailableSeats()) {
-            throw new IllegalArgumentException("Not enough seats available for this event!");
+            throw new BusinessRuleException("Not enough seats available for this event!");
         }
         event.setAvailableSeats(event.getAvailableSeats() - request.getSeatsBooked());
         Booking booking=bookingMapper.toEntity(request);
@@ -85,16 +86,16 @@ public class BookingServiceImpl implements BookingService {
         }
 
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new IllegalArgumentException("Only confirmed bookings can be updated!");
+            throw new BusinessRuleException("Only confirmed bookings can be updated!");
         }
 
         Event event = booking.getEvent();
         if (event.getStatus() != EventStatus.UPCOMING) {
-            throw new IllegalArgumentException("Bookings can only be modified for upcoming events!");
+            throw new BusinessRuleException("Bookings can only be modified for upcoming events!");
         }
 
         if (!LocalDateTime.now().isBefore(event.getStartDateTime())) {
-            throw new IllegalArgumentException("The event has already started!");
+            throw new BusinessRuleException("The event has already started!");
         }
 
         int oldSeats = booking.getSeatsBooked();
@@ -102,7 +103,7 @@ public class BookingServiceImpl implements BookingService {
         int seatDifference = newSeats - oldSeats;
 
         if (seatDifference > 0 && seatDifference > event.getAvailableSeats()) {
-            throw new IllegalArgumentException("Not enough seats available for this event!"
+            throw new BusinessRuleException("Not enough seats available for this event!"
             );
         }
         event.setAvailableSeats(event.getAvailableSeats() - seatDifference);

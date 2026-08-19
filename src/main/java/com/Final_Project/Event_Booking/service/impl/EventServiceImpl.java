@@ -1,5 +1,6 @@
 package com.Final_Project.Event_Booking.service.impl;
 
+import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
 import com.Final_Project.Event_Booking.model.dto.request.EventRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.EventResponseDTO;
@@ -39,11 +40,11 @@ public class EventServiceImpl implements EventService {
                 .orElseThrow(()-> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
 
         if (request.getTotalSeats() > venue.getCapacity()) {
-            throw new IllegalArgumentException("Total seats cannot exceed the venue capacity!");
+            throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
         }
 
         if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
-            throw new IllegalArgumentException("Start date and time must be before the end date and time!");
+            throw new BusinessRuleException("Start date and time must be before the end date and time!");
         }
 
         List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
@@ -92,14 +93,14 @@ public class EventServiceImpl implements EventService {
         }
 
         if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
-            throw new IllegalArgumentException("Start date and time must be before the end date and time!");
+            throw new BusinessRuleException("Start date and time must be before the end date and time!");
         }
 
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(()-> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
 
         if (request.getTotalSeats() > venue.getCapacity()) {
-            throw new IllegalArgumentException("Total seats cannot exceed the venue capacity!");
+            throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
         }
 
         List<Category> categories=categoryRepository.findAllById(request.getCategoryIds());

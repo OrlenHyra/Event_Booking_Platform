@@ -100,10 +100,7 @@ public class UserServiceImpl implements UserService {
                 .getName();
 
         return userRepository.findByUsername(username)
-                .orElseThrow(() ->
-                        new UserNotFoundException(
-                                "User with username:" + username + " not found!"
-                        ));
+                .orElseThrow(()-> new UserNotFoundException("User with username:"+username+" is not found!"));
     }
 
     @Override

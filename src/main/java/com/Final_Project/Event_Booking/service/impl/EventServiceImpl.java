@@ -4,10 +4,7 @@ import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
 import com.Final_Project.Event_Booking.model.dto.request.EventRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.EventResponseDTO;
-import com.Final_Project.Event_Booking.model.entity.Category;
-import com.Final_Project.Event_Booking.model.entity.Event;
-import com.Final_Project.Event_Booking.model.entity.User;
-import com.Final_Project.Event_Booking.model.entity.Venue;
+import com.Final_Project.Event_Booking.model.entity.*;
 import com.Final_Project.Event_Booking.model.enums.EventStatus;
 import com.Final_Project.Event_Booking.model.enums.UserRole;
 import com.Final_Project.Event_Booking.model.mapper.EventMapper;
@@ -23,7 +20,6 @@ import org.springframework.data.domain.Page;
 
 import org.springframework.security.access.AccessDeniedException;
 
-import java.awt.print.Pageable;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -38,6 +34,17 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final UserService userService;
 
+
+    private Double calculateAverageRating(Event event){
+        if(event.getReviews() == null || event.getReviews().isEmpty()){
+            return null;
+        }
+        return event.getReviews()
+                .stream()
+                .mapToInt(Review::getRating)
+                .average()
+                .orElse(0.0);
+    }
     @Override
     public EventResponseDTO createEvent(EventRequestDTO request) {
         User organizer = userService.getCurrentUser();
@@ -76,14 +83,21 @@ public class EventServiceImpl implements EventService {
     public EventResponseDTO getEvent(Long id) {
         Event event=eventRepository.findById(id)
                 .orElseThrow(()->new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
-        return eventMapper.toResponseDTO(event);
+
+        EventResponseDTO response = eventMapper.toResponseDTO(event);
+        response.setAverageRating(calculateAverageRating(event));
+        return response;
     }
 
     @Override
     public List<EventResponseDTO> getAllEvents() {
         return eventRepository.findAll()
                 .stream()
-                .map(eventMapper::toResponseDTO)
+                .map(event ->{
+                    EventResponseDTO response=eventMapper.toResponseDTO(event);
+                    response.setAverageRating(calculateAverageRating(event));
+                    return response;
+        })
                 .toList();
     }
 

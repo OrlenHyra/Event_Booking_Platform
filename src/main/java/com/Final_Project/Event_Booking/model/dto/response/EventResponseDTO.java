@@ -32,6 +32,8 @@ public class EventResponseDTO {
 
     private EventStatus status;
 
+    private Double averageRating;
+
     private OrganizerResponseDTO organizer;
 
     private VenueResponseDTO venue;

@@ -2,6 +2,7 @@ package com.Final_Project.Event_Booking.controller;
 
 import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
+import com.Final_Project.Event_Booking.model.enums.BookingStatus;
 import com.Final_Project.Event_Booking.service.BookingService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -47,6 +48,7 @@ public class BookingController {
     }
 
     @PutMapping("/{bookingId}")
+    @PreAuthorize("hasRole('ATTENDEE')")
     public ResponseEntity<BookingResponseDTO> updateBooking(
             @PathVariable Long bookingId,
             @Valid @RequestBody BookingRequestDTO request
@@ -63,5 +65,15 @@ public class BookingController {
     ) {
         bookingService.cancelBooking(bookingId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/my-bookings")
+    @PreAuthorize("hasRole('ATTENDEE')")
+    public ResponseEntity<List<BookingResponseDTO>> getMyBookings(
+            @RequestParam(required = false) BookingStatus status
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(bookingService.getMyBookings(status));
     }
 }

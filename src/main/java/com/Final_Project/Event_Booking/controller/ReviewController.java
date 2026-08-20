@@ -29,6 +29,7 @@ public class ReviewController {
     }
 
     @GetMapping("/{reviewId}")
+    @PreAuthorize("hasAnyRole('ATTENDEE', 'ADMIN')")
     public ResponseEntity<ReviewResponseDTO> getReview(
             @PathVariable Long reviewId
     ){
@@ -38,6 +39,7 @@ public class ReviewController {
     }
 
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<List<ReviewResponseDTO>> getAllReviews(){
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -62,5 +64,14 @@ public class ReviewController {
     ){
         reviewService.deleteReview(reviewId);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/event/{eventId}")
+    public ResponseEntity<List<ReviewResponseDTO>> getEventReviews(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(reviewService.getEventReviews(eventId));
     }
 }

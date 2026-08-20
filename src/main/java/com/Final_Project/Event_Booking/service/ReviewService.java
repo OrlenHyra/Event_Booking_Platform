@@ -15,4 +15,6 @@ public interface ReviewService {
     ReviewResponseDTO updateReview(Long id, ReviewRequestDTO request);
 
     void deleteReview(Long id);
+
+    List<ReviewResponseDTO> getEventReviews(Long eventId);
 }

@@ -105,4 +105,14 @@ public class ReviewServiceImpl implements ReviewService {
         }
         reviewRepository.delete(review);
     }
+
+    @Override
+    public List<ReviewResponseDTO> getEventReviews(Long eventId) {
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(()-> new ResourcesNotFoundException("Event with id:"+eventId+" is not found!"));
+        return reviewRepository.findByEvent_Id(eventId)
+                .stream()
+                .map(reviewMapper::toResponseDTO)
+                .toList();
+    }
 }

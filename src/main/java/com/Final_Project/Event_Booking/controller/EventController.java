@@ -33,6 +33,32 @@ public class EventController {
                 .body(eventService.createEvent(request));
     }
 
+    @PutMapping("/{eventId}/publish")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<EventResponseDTO> publishEvent(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(eventService.publishEvent(eventId));
+    }
+
+    @GetMapping("/my-events")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<List<EventResponseDTO>> getOrganizerEvents() {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(eventService.getOrganizerEvents());
+    }
+
+    @GetMapping("/all")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<List<EventResponseDTO>> getAllEventsForAdmin() {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(eventService.getAllEventsForAdmin());
+    }
+
     @GetMapping("/{eventId}")
     public ResponseEntity<EventResponseDTO> getEvent(
             @PathVariable Long eventId
@@ -43,7 +69,7 @@ public class EventController {
     }
 
     @GetMapping
-    public ResponseEntity<List<EventResponseDTO>> getEvent(){
+    public ResponseEntity<List<EventResponseDTO>> getAllEvents(){
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(eventService.getAllEvents());
@@ -61,12 +87,13 @@ public class EventController {
     }
 
     @DeleteMapping("/{eventId}")
-    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
-    public ResponseEntity<Void> deleteEvent(
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<EventResponseDTO> cancelEvent(
             @PathVariable Long eventId
-    ){
-        eventService.deleteEvent(eventId);
-        return ResponseEntity.noContent().build();
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(eventService.cancelEvent(eventId));
     }
 
     @GetMapping("/category/{categoryName}")

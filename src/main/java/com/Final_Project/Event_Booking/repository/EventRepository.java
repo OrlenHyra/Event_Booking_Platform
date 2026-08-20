@@ -39,4 +39,8 @@ public interface EventRepository extends JpaRepository<Event,Long> {
             @Param("maxPrice") BigDecimal maxPrice,
             Pageable pageable
             );
+
+    List<Event> findByStatusIn(List<EventStatus> statuses);
+
+    List<Event> findByOrganizer_Id(Long organizerId);
 }

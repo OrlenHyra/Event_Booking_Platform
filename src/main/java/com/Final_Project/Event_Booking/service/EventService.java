@@ -13,13 +13,19 @@ import java.util.List;
 public interface EventService {
     EventResponseDTO createEvent(EventRequestDTO request);
 
+    EventResponseDTO publishEvent(Long id);
+
+    List<EventResponseDTO> getOrganizerEvents();
+
+    List<EventResponseDTO> getAllEventsForAdmin();
+
     EventResponseDTO getEvent(Long id);
 
     List<EventResponseDTO> getAllEvents();
 
     EventResponseDTO updateEvent(Long id,EventRequestDTO request);
 
-    void deleteEvent(Long id);
+    EventResponseDTO cancelEvent(Long id);
 
     Page<EventResponseDTO> getEventsByCategory(String categoryName, Pageable pageable);
 

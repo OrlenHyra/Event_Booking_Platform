@@ -68,4 +68,15 @@ public class UserController {
                 .status(HttpStatus.OK)
                 .body(userService.updateRole(userId, role));
     }
+
+    @PreAuthorize("hasRole('ADMIN')")
+    @PutMapping("/{userId}/status")
+    public ResponseEntity<UserResponseDTO> updateActiveStatus(
+            @PathVariable Long userId,
+            @RequestParam boolean active
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(userService.updateActiveStatus(userId, active));
+    }
 }

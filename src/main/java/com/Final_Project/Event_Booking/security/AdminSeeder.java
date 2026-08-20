@@ -23,9 +23,10 @@ public class AdminSeeder implements CommandLineRunner {
         if (!userRepository.existsByUsername(username)) {
             User admin = User.builder()
                     .username(username)
-                    .password(passwordEncoder.encode("admin&password"))
+                    .password(passwordEncoder.encode("admin"))
                     .email("admin@gmail.com")
                     .role(UserRole.ADMIN)
+                    .active(true)
                     .build();
             userRepository.save(admin);
         }

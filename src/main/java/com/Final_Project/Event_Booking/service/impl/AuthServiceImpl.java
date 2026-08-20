@@ -74,6 +74,7 @@ public class AuthServiceImpl implements AuthService {
         User user= userMapper.toEntity(registerRequest);
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         user.setRole(UserRole.ATTENDEE);
+        user.setActive(true);
 
         User savedUser=userRepository.save(user);
         return userMapper.toResponseDTO(savedUser);

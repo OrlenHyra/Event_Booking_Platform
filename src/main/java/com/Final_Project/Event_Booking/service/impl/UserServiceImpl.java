@@ -108,4 +108,13 @@ public class UserServiceImpl implements UserService {
         User currentUser = getCurrentUser();
         return event.getOrganizer().getId().equals(currentUser.getId());
     }
+
+    @Override
+    public UserResponseDTO updateActiveStatus(Long id, boolean active) {
+        User user = userRepository.findById(id)
+                .orElseThrow(() -> new UserNotFoundException("User with id:"+id+" not found!"));
+        user.setActive(active);
+        User updatedUser = userRepository.save(user);
+        return userMapper.toResponseDTO(updatedUser);
+    }
 }

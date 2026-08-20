@@ -23,4 +23,6 @@ public interface UserService {
     User getCurrentUser();
 
     boolean isCurrentUserOwner(Event event);
+
+    UserResponseDTO updateActiveStatus(Long id, boolean active);
 }

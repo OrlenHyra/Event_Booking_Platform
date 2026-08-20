@@ -3,7 +3,7 @@ package com.Final_Project.Event_Booking.model.dto.response;
 import com.Final_Project.Event_Booking.model.enums.BookingStatus;
 import lombok.*;
 
-import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Getter
 @Setter
@@ -17,7 +17,7 @@ public class BookingResponseDTO {
 
     private BookingStatus status;
 
-    private LocalDate bookingDate;
+    private LocalDateTime bookingDate;
 
     private Long eventId;
 
@@ -26,4 +26,8 @@ public class BookingResponseDTO {
     private Long userId;
 
     private String username;
+
+    private String message;
+
+    private WaitlistResponseDTO waitlist;
 }

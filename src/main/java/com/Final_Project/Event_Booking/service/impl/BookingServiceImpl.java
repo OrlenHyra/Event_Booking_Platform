@@ -7,11 +7,15 @@ import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.Booking;
 import com.Final_Project.Event_Booking.model.entity.Event;
 import com.Final_Project.Event_Booking.model.entity.User;
+import com.Final_Project.Event_Booking.model.entity.Waitlist;
 import com.Final_Project.Event_Booking.model.enums.BookingStatus;
 import com.Final_Project.Event_Booking.model.enums.EventStatus;
+import com.Final_Project.Event_Booking.model.enums.UserRole;
 import com.Final_Project.Event_Booking.model.mapper.BookingMapper;
+import com.Final_Project.Event_Booking.model.mapper.WaitlistMapper;
 import com.Final_Project.Event_Booking.repository.BookingRepository;
 import com.Final_Project.Event_Booking.repository.EventRepository;
+import com.Final_Project.Event_Booking.repository.WaitlistRepository;
 import com.Final_Project.Event_Booking.service.BookingService;
 import com.Final_Project.Event_Booking.service.UserService;
 import jakarta.transaction.Transactional;
@@ -30,6 +34,8 @@ public class BookingServiceImpl implements BookingService {
 
     private final UserService userService;
     private final EventRepository eventRepository;
+    private final WaitlistRepository waitlistRepository;
+    private final WaitlistMapper waitlistMapper;
 
     @Transactional
     @Override
@@ -46,7 +52,30 @@ public class BookingServiceImpl implements BookingService {
         }
 
         if (request.getSeatsBooked() > event.getAvailableSeats()) {
-            throw new BusinessRuleException("Not enough seats available for this event!");
+            if (waitlistRepository.existsByAttendee_IdAndEvent_Id(
+                    user.getId(),
+                    event.getId()
+            )) {
+                throw new BusinessRuleException("You are already on the waitlist for this event!");
+            }
+            Waitlist waitlist = Waitlist.builder()
+                    .attendee(user)
+                    .event(event)
+                    .seatsRequested(request.getSeatsBooked())
+                    .joinedAt(LocalDateTime.now())
+                    .build();
+            Waitlist savedWaitlist = waitlistRepository.save(waitlist);
+
+            BookingResponseDTO response = new BookingResponseDTO();
+
+            response.setEventId(event.getId());
+            response.setEventTitle(event.getTitle());
+            response.setUserId(user.getId());
+            response.setUsername(user.getUsername());
+            response.setMessage("Not enough seats available,you have been added to the waitlist.");
+            response.setWaitlist(waitlistMapper.toResponseDTO(savedWaitlist));
+
+            return response;
         }
         event.setAvailableSeats(event.getAvailableSeats() - request.getSeatsBooked());
         Booking booking=bookingMapper.toEntity(request);
@@ -57,13 +86,19 @@ public class BookingServiceImpl implements BookingService {
 
         Booking savedBooking=bookingRepository.save(booking);
 
-        return bookingMapper.toResponseDTO(savedBooking);
+        BookingResponseDTO response = bookingMapper.toResponseDTO(savedBooking);
+        response.setMessage("Booking created successfully.");
+        return response;
     }
 
     @Override
     public BookingResponseDTO getBooking(Long id) {
         Booking booking=bookingRepository.findById(id)
                 .orElseThrow(()->new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
+        User user = userService.getCurrentUser();
+        if (user.getRole() == UserRole.ATTENDEE && !booking.getBooker().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You are not allowed to view this booking!");
+        }
         return bookingMapper.toResponseDTO(booking);
     }
 
@@ -118,8 +153,8 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void cancelBooking(Long id) {
-        Booking booking=bookingRepository.findById(id)
-                .orElseThrow(()->new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
         User user = userService.getCurrentUser();
         if (!booking.getBooker().getId().equals(user.getId())) {
             throw new AccessDeniedException("You are not allowed to cancel this booking!");
@@ -128,9 +163,57 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessRuleException("Only confirmed bookings can be cancelled!");
         }
         Event event = booking.getEvent();
+        // Cancellation is not allowed within 24 hours of the event
+        if (LocalDateTime.now().plusHours(24).isAfter(event.getStartDateTime())) {
+            throw new BusinessRuleException(
+                    "Bookings cannot be cancelled within 24 hours of the event!"
+            );
+        }
         event.setAvailableSeats(event.getAvailableSeats() + booking.getSeatsBooked());
         booking.setStatus(BookingStatus.CANCELLED);
+
+        List<Waitlist> waitlists = waitlistRepository.findByEventInOrderByJoinedAtAsc(event.getId());
+        for (Waitlist waitlist : waitlists) {
+            if (event.getAvailableSeats() == 0) {
+                break;
+            }
+            if (waitlist.getSeatsRequested() <= event.getAvailableSeats()) {
+                Booking newBooking = new Booking();
+                newBooking.setBooker(waitlist.getAttendee());
+                newBooking.setEvent(event);
+                newBooking.setSeatsBooked(waitlist.getSeatsRequested());
+                newBooking.setStatus(BookingStatus.CONFIRMED);
+                newBooking.setBookingDate(LocalDateTime.now());
+
+                bookingRepository.save(newBooking);
+
+                event.setAvailableSeats(event.getAvailableSeats() - waitlist.getSeatsRequested());
+                waitlistRepository.delete(waitlist);
+            }
+        }
+
         eventRepository.save(event);
         bookingRepository.save(booking);
+    }
+
+    @Override
+    public List<BookingResponseDTO> getMyBookings(BookingStatus status) {
+        User user = userService.getCurrentUser();
+
+        List<Booking> bookings;
+
+        if(status!=null ){
+            bookings=bookingRepository.findByBooker_IdAndStatus(
+                    user.getId(), status
+            );
+        }else{
+            bookings=bookingRepository.findByBooker_Id(
+                    user.getId()
+            );
+        }
+        return bookings
+                .stream()
+                .map(bookingMapper::toResponseDTO)
+                .toList();
     }
 }

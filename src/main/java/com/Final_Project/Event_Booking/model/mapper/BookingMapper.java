@@ -21,6 +21,8 @@ public interface BookingMapper {
     @Mapping(source = "event.title", target = "eventTitle")
     @Mapping(source = "booker.id", target = "userId")
     @Mapping(source = "booker.username", target = "username")
+    @Mapping(target = "message", ignore = true)
+    @Mapping(target = "waitlist", ignore = true)
     BookingResponseDTO toResponseDTO(Booking booking);
 
     @Mapping(target = "id", ignore = true)

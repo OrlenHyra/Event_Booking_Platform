@@ -156,18 +156,17 @@ public class BookingServiceImpl implements BookingService {
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
         User user = userService.getCurrentUser();
-        if (!booking.getBooker().getId().equals(user.getId())) {
+
+        if (user.getRole() != UserRole.ADMIN && !booking.getBooker().getId().equals(user.getId())) {
             throw new AccessDeniedException("You are not allowed to cancel this booking!");
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
             throw new BusinessRuleException("Only confirmed bookings can be cancelled!");
         }
         Event event = booking.getEvent();
-        // Cancellation is not allowed within 24 hours of the event
-        if (LocalDateTime.now().plusHours(24).isAfter(event.getStartDateTime())) {
-            throw new BusinessRuleException(
-                    "Bookings cannot be cancelled within 24 hours of the event!"
-            );
+        // Cancellation is not allowed within 24 hours of the event,but admins can still cancel booking.
+        if (user.getRole() != UserRole.ADMIN && LocalDateTime.now().plusHours(24).isAfter(event.getStartDateTime())) {
+            throw new BusinessRuleException("Bookings cannot be cancelled within 24 hours of the event!");
         }
         event.setAvailableSeats(event.getAvailableSeats() + booking.getSeatsBooked());
         booking.setStatus(BookingStatus.CANCELLED);
@@ -212,6 +211,25 @@ public class BookingServiceImpl implements BookingService {
             );
         }
         return bookings
+                .stream()
+                .map(bookingMapper::toResponseDTO)
+                .toList();
+    }
+
+    @Override
+    public List<BookingResponseDTO> getMyEventBookings(Long eventId) {
+        User organizer = userService.getCurrentUser();
+        Event event = eventRepository.findById(eventId)
+                .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + eventId + " is not found!"));
+        if (!event.getOrganizer().getId().equals(organizer.getId())) {
+            throw new AccessDeniedException(
+                    "You are not allowed to view bookings for this event!"
+            );
+        }
+        return bookingRepository.findBookingsByEventAndOrganizer(
+                        eventId,
+                        organizer.getId()
+                )
                 .stream()
                 .map(bookingMapper::toResponseDTO)
                 .toList();

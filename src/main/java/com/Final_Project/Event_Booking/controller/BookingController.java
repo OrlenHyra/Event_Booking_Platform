@@ -76,4 +76,16 @@ public class BookingController {
                 .status(HttpStatus.OK)
                 .body(bookingService.getMyBookings(status));
     }
+
+    @GetMapping("/my-events/{eventId}")
+    @PreAuthorize("hasRole('ORGANIZER')")
+    public ResponseEntity<List<BookingResponseDTO>> getMyEventBookings(
+            @PathVariable Long eventId
+    ) {
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .body(bookingService.getMyEventBookings(eventId));
+    }
+
+
 }

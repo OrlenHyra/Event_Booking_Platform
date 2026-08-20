@@ -1,0 +1,13 @@
+package com.Final_Project.Event_Booking.model.mapper;
+
+import com.Final_Project.Event_Booking.model.dto.response.WaitlistResponseDTO;
+import com.Final_Project.Event_Booking.model.entity.Waitlist;
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+@Mapper(componentModel = "spring")
+public interface WaitlistMapper {
+    @Mapping(target = "attendeeId", source = "attendee.id")
+    @Mapping(target = "eventId", source = "event.id")
+    WaitlistResponseDTO toResponseDTO(Waitlist waitlist);
+}

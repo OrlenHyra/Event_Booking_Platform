@@ -2,6 +2,7 @@ package com.Final_Project.Event_Booking.service.impl;
 
 import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
+import com.Final_Project.Event_Booking.exception.custom.UnauthorizedAccessException;
 import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingCreationResponseDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
@@ -19,7 +20,6 @@ import com.Final_Project.Event_Booking.service.UserService;
 import com.Final_Project.Event_Booking.service.WaitlistService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -82,7 +82,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(()->new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
         User user = userService.getCurrentUser();
         if (user.getRole() == UserRole.ATTENDEE && !booking.getBooker().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You are not allowed to view this booking!");
+            throw new UnauthorizedAccessException("You are not allowed to view this booking!");
         }
         return bookingMapper.toResponseDTO(booking);
     }
@@ -103,7 +103,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourcesNotFoundException("Booking with id: " + id + " is not found!"));
         User user = userService.getCurrentUser();
         if (user.getRole() != UserRole.ADMIN) {
-            throw new AccessDeniedException("Only admins are allowed to cancel bookings!");
+            throw new UnauthorizedAccessException("Only admins are allowed to cancel bookings!");
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
             throw new BusinessRuleException("Only confirmed bookings can be cancelled!");
@@ -118,7 +118,7 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourcesNotFoundException("Booking with id: " + id + " is not found!"));
         User user = userService.getCurrentUser();
         if (!booking.getBooker().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You are not allowed to cancel this booking!");
+            throw new UnauthorizedAccessException("You are not allowed to cancel this booking!");
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
             throw new BusinessRuleException("Only confirmed bookings can be cancelled!"
@@ -158,7 +158,7 @@ public class BookingServiceImpl implements BookingService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + eventId + " is not found!"));
         if (!event.getOrganizer().getId().equals(organizer.getId())) {
-            throw new AccessDeniedException(
+            throw new UnauthorizedAccessException(
                     "You are not allowed to view bookings for this event!"
             );
         }

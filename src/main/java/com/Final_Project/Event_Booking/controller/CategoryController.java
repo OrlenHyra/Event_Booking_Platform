@@ -19,7 +19,7 @@ public class CategoryController {
     private final CategoryService categoryService;
 
     @PostMapping
-    @PreAuthorize(("hasRole('ADMIN')"))
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryResponseDTO> createCategory(
             @Valid @RequestBody CategoryRequestDTO request
             ){
@@ -29,7 +29,7 @@ public class CategoryController {
     }
 
     @GetMapping
-    @PreAuthorize(("hasRole('ADMIN')"))
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public ResponseEntity<List<CategoryResponseDTO>> getAllCategories(){
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -37,7 +37,7 @@ public class CategoryController {
     }
 
     @GetMapping("/{categoryId}")
-    @PreAuthorize(("hasRole('ADMIN')"))
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public ResponseEntity<CategoryResponseDTO>getCategory(
             @PathVariable Long categoryId
     ){
@@ -47,7 +47,7 @@ public class CategoryController {
     }
 
     @PutMapping("/{categoryId}")
-    @PreAuthorize(("hasRole('ADMIN')"))
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<CategoryResponseDTO> updateCategory(
             @PathVariable Long categoryId,
             @Valid @RequestBody CategoryRequestDTO request
@@ -58,6 +58,7 @@ public class CategoryController {
     }
 
     @DeleteMapping("/{categoryId}")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Void> deleteCategory(
             @PathVariable Long categoryId
     ){

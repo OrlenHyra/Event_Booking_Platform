@@ -29,7 +29,7 @@ public class VenueController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public ResponseEntity<List<VenueResponseDTO>> getAllVenues() {
         return ResponseEntity
                 .status(HttpStatus.OK)
@@ -37,13 +37,13 @@ public class VenueController {
     }
 
     @GetMapping("/{venueId}")
-    @PreAuthorize("hasRole('ADMIN')")
+    @PreAuthorize("hasAnyRole('ORGANIZER','ADMIN')")
     public ResponseEntity<VenueResponseDTO> getVenue(
             @PathVariable Long venueId
     ){
         return ResponseEntity
                 .status(HttpStatus.OK)
-                .body(VenueResponseDTO.builder().build());
+                .body(venueService.getVenue(venueId));
     }
 
     @PutMapping("/{venueId}")

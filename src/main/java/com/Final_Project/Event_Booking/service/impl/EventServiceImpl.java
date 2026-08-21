@@ -2,6 +2,7 @@ package com.Final_Project.Event_Booking.service.impl;
 
 import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
+import com.Final_Project.Event_Booking.exception.custom.UnauthorizedAccessException;
 import com.Final_Project.Event_Booking.model.dto.request.EventRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.EventResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.*;
@@ -18,7 +19,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
 
-import org.springframework.security.access.AccessDeniedException;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -63,6 +63,17 @@ public class EventServiceImpl implements EventService {
             eventRepository.save(event);
         }
     }
+
+    private void checkVenueAvailability(Venue venue, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        Long overlappingEventId = eventRepository.findOverlappingEventId(
+                venue.getId(),
+                startDateTime,
+                endDateTime
+        );
+        if (overlappingEventId != null) {
+            throw new BusinessRuleException("The venue already has another event during the selected time!");
+        }
+    }
     @Override
     public EventResponseDTO createEvent(EventRequestDTO request) {
         User organizer = userService.getCurrentUser();
@@ -70,13 +81,15 @@ public class EventServiceImpl implements EventService {
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(()-> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
 
+        if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
+            throw new BusinessRuleException("Start date and time must be before the end date and time!");
+        }
+
         if (request.getTotalSeats() > venue.getCapacity()) {
             throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
         }
 
-        if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
-            throw new BusinessRuleException("Start date and time must be before the end date and time!");
-        }
+        checkVenueAvailability(venue, request.getStartDateTime(), request.getEndDateTime());
 
         List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
 
@@ -104,7 +117,7 @@ public class EventServiceImpl implements EventService {
         User user = userService.getCurrentUser();
 
         if(user.getRole()==UserRole.ORGANIZER && !userService.isCurrentUserOwner(event)){
-            throw new AccessDeniedException("You are not allowed to publish this event!");
+            throw new UnauthorizedAccessException("You are not allowed to publish this event!");
         }
         if(event.getStatus()!=EventStatus.DRAFT){
             throw new BusinessRuleException("Only Draft events can be published!");
@@ -176,6 +189,18 @@ public class EventServiceImpl implements EventService {
                 .toList();
     }
 
+    private void checkVenueAvailabilityForUpdate(Long eventId, Venue venue, LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        Long overlappingEventId = eventRepository.findOverlappingEventIdForUpdate(
+                eventId,
+                venue.getId(),
+                startDateTime,
+                endDateTime
+        );
+        if (overlappingEventId != null) {
+            throw new BusinessRuleException("The venue already has another event during the selected time!");
+        }
+    }
+
     @Override
     public EventResponseDTO updateEvent(Long id, EventRequestDTO request) {
         Event event = eventRepository.findById(id)
@@ -184,7 +209,11 @@ public class EventServiceImpl implements EventService {
         User currentUser = userService.getCurrentUser();
 
         if (currentUser.getRole() == UserRole.ORGANIZER && !userService.isCurrentUserOwner(event)) {
-            throw new AccessDeniedException("You are not allowed to update this event!");
+            throw new UnauthorizedAccessException("You are not allowed to update this event!");
+        }
+
+        if (event.getStatus() != EventStatus.DRAFT && event.getStatus() != EventStatus.UPCOMING) {
+            throw new BusinessRuleException("Only draft or upcoming events can be updated!");
         }
 
         if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
@@ -197,6 +226,8 @@ public class EventServiceImpl implements EventService {
         if (request.getTotalSeats() > venue.getCapacity()) {
             throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
         }
+
+        checkVenueAvailabilityForUpdate(event.getId(), venue, request.getStartDateTime(), request.getEndDateTime());
 
         List<Category> categories=categoryRepository.findAllById(request.getCategoryIds());
 
@@ -218,7 +249,7 @@ public class EventServiceImpl implements EventService {
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
         if (!userService.isCurrentUserOwner(event)) {
-            throw new AccessDeniedException("You are not allowed to cancel this event!");
+            throw new UnauthorizedAccessException("You are not allowed to cancel this event!");
         }
         if (event.getStatus() == EventStatus.CANCELLED) {
             throw new BusinessRuleException("Event is already cancelled!");

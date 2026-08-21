@@ -43,4 +43,34 @@ public interface EventRepository extends JpaRepository<Event,Long> {
     List<Event> findByStatusIn(List<EventStatus> statuses);
 
     List<Event> findByOrganizer_Id(Long organizerId);
+
+    @Query(value = """
+    SELECT e.id
+    FROM event e
+    WHERE e.venue_id = :venueId
+    AND e.start_date_time < :endDateTime
+    AND e.end_date_time > :startDateTime
+    LIMIT 1
+    """, nativeQuery = true)
+    Long findOverlappingEventId(
+            @Param("venueId") Long venueId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
+
+    @Query(value = """
+    SELECT e.id
+    FROM event e
+    WHERE e.venue_id = :venueId
+    AND e.id <> :eventId
+    AND e.start_date_time < :endDateTime
+    AND e.end_date_time > :startDateTime
+    LIMIT 1
+    """, nativeQuery = true)
+    Long findOverlappingEventIdForUpdate(
+            @Param("eventId") Long eventId,
+            @Param("venueId") Long venueId,
+            @Param("startDateTime") LocalDateTime startDateTime,
+            @Param("endDateTime") LocalDateTime endDateTime
+    );
 }

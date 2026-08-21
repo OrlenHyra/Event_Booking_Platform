@@ -20,4 +20,5 @@ public class WaitlistResponseDTO {
 
     private LocalDateTime joinedAt;
 
+    private String message;
 }

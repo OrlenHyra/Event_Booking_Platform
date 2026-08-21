@@ -1,6 +1,7 @@
 package com.Final_Project.Event_Booking.controller;
 
 import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
+import com.Final_Project.Event_Booking.model.dto.response.BookingCreationResponseDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
 import com.Final_Project.Event_Booking.model.enums.BookingStatus;
 import com.Final_Project.Event_Booking.service.BookingService;
@@ -21,7 +22,7 @@ public class BookingController {
 
     @PostMapping
     @PreAuthorize("hasRole('ATTENDEE')")
-    public ResponseEntity<BookingResponseDTO> createBooking(
+    public ResponseEntity<BookingCreationResponseDTO> createBooking(
             @Valid @RequestBody BookingRequestDTO request
     ) {
         return ResponseEntity
@@ -47,26 +48,6 @@ public class BookingController {
                 .body(bookingService.getAllBookings());
     }
 
-    @PutMapping("/{bookingId}")
-    @PreAuthorize("hasRole('ATTENDEE')")
-    public ResponseEntity<BookingResponseDTO> updateBooking(
-            @PathVariable Long bookingId,
-            @Valid @RequestBody BookingRequestDTO request
-    ){
-        return ResponseEntity
-                .status(HttpStatus.OK)
-                .body(bookingService.updateBooking(bookingId, request));
-    }
-
-    @DeleteMapping("/{bookingId}")
-    @PreAuthorize("hasAnyRole('ATTENDEE', 'ADMIN')")
-    public ResponseEntity<Void> cancelBooking(
-            @PathVariable Long bookingId
-    ) {
-        bookingService.cancelBooking(bookingId);
-        return ResponseEntity.noContent().build();
-    }
-
     @GetMapping("/my-bookings")
     @PreAuthorize("hasRole('ATTENDEE')")
     public ResponseEntity<List<BookingResponseDTO>> getMyBookings(
@@ -77,7 +58,7 @@ public class BookingController {
                 .body(bookingService.getMyBookings(status));
     }
 
-    @GetMapping("/my-events/{eventId}")
+    @GetMapping("/my-events-bookings/{eventId}")
     @PreAuthorize("hasRole('ORGANIZER')")
     public ResponseEntity<List<BookingResponseDTO>> getMyEventBookings(
             @PathVariable Long eventId
@@ -87,5 +68,21 @@ public class BookingController {
                 .body(bookingService.getMyEventBookings(eventId));
     }
 
+    @DeleteMapping("/{bookingId}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Void> cancelBooking(
+            @PathVariable Long bookingId
+    ) {
+        bookingService.cancelBooking(bookingId);
+        return ResponseEntity.noContent().build();
+    }
 
+    @DeleteMapping("/my-bookings/{bookingId}")
+    @PreAuthorize("hasRole('ATTENDEE')")
+    public ResponseEntity<Void> cancelMyBooking(
+            @PathVariable Long bookingId
+    ) {
+        bookingService.cancelMyBooking(bookingId);
+        return ResponseEntity.noContent().build();
+    }
 }

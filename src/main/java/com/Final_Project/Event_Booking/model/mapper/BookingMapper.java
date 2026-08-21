@@ -3,6 +3,8 @@ package com.Final_Project.Event_Booking.model.mapper;
 import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.Booking;
+import com.Final_Project.Event_Booking.model.entity.Event;
+import com.Final_Project.Event_Booking.model.entity.Waitlist;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
@@ -31,4 +33,12 @@ public interface BookingMapper {
     @Mapping(target = "bookingDate", ignore = true)
     @Mapping(target = "status", ignore = true)
     void updateEntity(BookingRequestDTO request, @MappingTarget Booking booking);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "booker", source = "waitlist.attendee")
+    @Mapping(target = "event", source = "event")
+    @Mapping(target = "seatsBooked", source = "waitlist.seatsRequested")
+    @Mapping(target = "status", constant = "CONFIRMED")
+    @Mapping(target = "bookingDate", expression = "java(java.time.LocalDateTime.now())")
+    Booking toBookingFromWaitlist(Waitlist waitlist, Event event);
 }

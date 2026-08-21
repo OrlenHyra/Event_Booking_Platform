@@ -3,21 +3,20 @@ package com.Final_Project.Event_Booking.service.impl;
 import com.Final_Project.Event_Booking.exception.custom.BusinessRuleException;
 import com.Final_Project.Event_Booking.exception.custom.ResourcesNotFoundException;
 import com.Final_Project.Event_Booking.model.dto.request.BookingRequestDTO;
+import com.Final_Project.Event_Booking.model.dto.response.BookingCreationResponseDTO;
 import com.Final_Project.Event_Booking.model.dto.response.BookingResponseDTO;
 import com.Final_Project.Event_Booking.model.entity.Booking;
 import com.Final_Project.Event_Booking.model.entity.Event;
 import com.Final_Project.Event_Booking.model.entity.User;
-import com.Final_Project.Event_Booking.model.entity.Waitlist;
 import com.Final_Project.Event_Booking.model.enums.BookingStatus;
 import com.Final_Project.Event_Booking.model.enums.EventStatus;
 import com.Final_Project.Event_Booking.model.enums.UserRole;
 import com.Final_Project.Event_Booking.model.mapper.BookingMapper;
-import com.Final_Project.Event_Booking.model.mapper.WaitlistMapper;
 import com.Final_Project.Event_Booking.repository.BookingRepository;
 import com.Final_Project.Event_Booking.repository.EventRepository;
-import com.Final_Project.Event_Booking.repository.WaitlistRepository;
 import com.Final_Project.Event_Booking.service.BookingService;
 import com.Final_Project.Event_Booking.service.UserService;
+import com.Final_Project.Event_Booking.service.WaitlistService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
@@ -34,61 +33,47 @@ public class BookingServiceImpl implements BookingService {
 
     private final UserService userService;
     private final EventRepository eventRepository;
-    private final WaitlistRepository waitlistRepository;
-    private final WaitlistMapper waitlistMapper;
+    private final WaitlistService waitlistService;
 
-    @Transactional
-    @Override
-    public BookingResponseDTO createBooking(BookingRequestDTO request) {
-        User user=userService.getCurrentUser();
-        Event event=eventRepository.findById(request.getEventId())
-                .orElseThrow(()->new ResourcesNotFoundException(("Event with id:"+request.getEventId()+" is not found!")));
-        if (event.getStatus() != EventStatus.UPCOMING) {
-            throw new BusinessRuleException("Bookings are only allowed for upcoming events!");
-        }
-
-        if (!LocalDateTime.now().isBefore(event.getStartDateTime())) {
-            throw new BusinessRuleException("The event has already started!");
-        }
-
-        if (request.getSeatsBooked() > event.getAvailableSeats()) {
-            if (waitlistRepository.existsByAttendee_IdAndEvent_Id(
-                    user.getId(),
-                    event.getId()
-            )) {
-                throw new BusinessRuleException("You are already on the waitlist for this event!");
-            }
-            Waitlist waitlist = Waitlist.builder()
-                    .attendee(user)
-                    .event(event)
-                    .seatsRequested(request.getSeatsBooked())
-                    .joinedAt(LocalDateTime.now())
-                    .build();
-            Waitlist savedWaitlist = waitlistRepository.save(waitlist);
-
-            BookingResponseDTO response = new BookingResponseDTO();
-
-            response.setEventId(event.getId());
-            response.setEventTitle(event.getTitle());
-            response.setUserId(user.getId());
-            response.setUsername(user.getUsername());
-            response.setMessage("Not enough seats available,you have been added to the waitlist.");
-            response.setWaitlist(waitlistMapper.toResponseDTO(savedWaitlist));
-
-            return response;
-        }
+    private BookingCreationResponseDTO createConfirmedBooking(BookingRequestDTO request, User user, Event event) {
         event.setAvailableSeats(event.getAvailableSeats() - request.getSeatsBooked());
-        Booking booking=bookingMapper.toEntity(request);
+        eventRepository.save(event);
+
+        Booking booking = bookingMapper.toEntity(request);
         booking.setBooker(user);
         booking.setEvent(event);
         booking.setStatus(BookingStatus.CONFIRMED);
         booking.setBookingDate(LocalDateTime.now());
 
-        Booking savedBooking=bookingRepository.save(booking);
-
+        Booking savedBooking = bookingRepository.save(booking);
         BookingResponseDTO response = bookingMapper.toResponseDTO(savedBooking);
         response.setMessage("Booking created successfully.");
-        return response;
+
+        return BookingCreationResponseDTO.builder()
+                .booking(response)
+                .build();
+    }
+
+    private void validateEventForBooking(Event event) {
+        if (event.getStatus() != EventStatus.UPCOMING) {
+            throw new BusinessRuleException("Bookings are only allowed for upcoming events!");
+        }
+        if (!LocalDateTime.now().isBefore(event.getStartDateTime())) {
+            throw new BusinessRuleException("The event has already started!");
+        }
+    }
+
+    @Transactional
+    @Override
+    public BookingCreationResponseDTO createBooking(BookingRequestDTO request) {
+        User user = userService.getCurrentUser();
+        Event event = eventRepository.findById(request.getEventId())
+                .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + request.getEventId() + " is not found!"));
+        validateEventForBooking(event);
+        if (request.getSeatsBooked() <= event.getAvailableSeats()) {
+            return createConfirmedBooking(request, user, event);
+        }
+        return waitlistService.createWaitlist(user, event, request.getSeatsBooked());
     }
 
     @Override
@@ -111,88 +96,39 @@ public class BookingServiceImpl implements BookingService {
                 .toList();
     }
 
-    @Transactional
-    @Override
-    public BookingResponseDTO updateBooking(Long id, BookingRequestDTO request){
-        Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
-        User user = userService.getCurrentUser();
-        if (!booking.getBooker().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You are not allowed to modify this booking!");
-        }
-
-        if (booking.getStatus() != BookingStatus.CONFIRMED) {
-            throw new BusinessRuleException("Only confirmed bookings can be updated!");
-        }
-
-        Event event = booking.getEvent();
-        if (event.getStatus() != EventStatus.UPCOMING) {
-            throw new BusinessRuleException("Bookings can only be modified for upcoming events!");
-        }
-
-        if (!LocalDateTime.now().isBefore(event.getStartDateTime())) {
-            throw new BusinessRuleException("The event has already started!");
-        }
-
-        int oldSeats = booking.getSeatsBooked();
-        int newSeats = request.getSeatsBooked();
-        int seatDifference = newSeats - oldSeats;
-
-        if (seatDifference > 0 && seatDifference > event.getAvailableSeats()) {
-            throw new BusinessRuleException("Not enough seats available for this event!"
-            );
-        }
-        event.setAvailableSeats(event.getAvailableSeats() - seatDifference);
-        booking.setSeatsBooked(newSeats);
-        eventRepository.save(event);
-        Booking updatedBooking = bookingRepository.save(booking);
-
-        return bookingMapper.toResponseDTO(updatedBooking);
-    }
-
     @Override
     @Transactional
     public void cancelBooking(Long id) {
         Booking booking = bookingRepository.findById(id)
-                .orElseThrow(() -> new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
+                .orElseThrow(() -> new ResourcesNotFoundException("Booking with id: " + id + " is not found!"));
         User user = userService.getCurrentUser();
-
-        if (user.getRole() != UserRole.ADMIN && !booking.getBooker().getId().equals(user.getId())) {
-            throw new AccessDeniedException("You are not allowed to cancel this booking!");
+        if (user.getRole() != UserRole.ADMIN) {
+            throw new AccessDeniedException("Only admins are allowed to cancel bookings!");
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
             throw new BusinessRuleException("Only confirmed bookings can be cancelled!");
         }
+        performCancelBooking(booking);
+    }
+
+    @Override
+    @Transactional
+    public void cancelMyBooking(Long id) {
+        Booking booking = bookingRepository.findById(id)
+                .orElseThrow(() -> new ResourcesNotFoundException("Booking with id: " + id + " is not found!"));
+        User user = userService.getCurrentUser();
+        if (!booking.getBooker().getId().equals(user.getId())) {
+            throw new AccessDeniedException("You are not allowed to cancel this booking!");
+        }
+        if (booking.getStatus() != BookingStatus.CONFIRMED) {
+            throw new BusinessRuleException("Only confirmed bookings can be cancelled!"
+            );
+        }
         Event event = booking.getEvent();
-        // Cancellation is not allowed within 24 hours of the event,but admins can still cancel booking.
-        if (user.getRole() != UserRole.ADMIN && LocalDateTime.now().plusHours(24).isAfter(event.getStartDateTime())) {
+        if (LocalDateTime.now().plusHours(24).isAfter(event.getStartDateTime())) {
             throw new BusinessRuleException("Bookings cannot be cancelled within 24 hours of the event!");
         }
-        event.setAvailableSeats(event.getAvailableSeats() + booking.getSeatsBooked());
-        booking.setStatus(BookingStatus.CANCELLED);
-
-        List<Waitlist> waitlists = waitlistRepository.findByEventInOrderByJoinedAtAsc(event.getId());
-        for (Waitlist waitlist : waitlists) {
-            if (event.getAvailableSeats() == 0) {
-                break;
-            }
-            if (waitlist.getSeatsRequested() <= event.getAvailableSeats()) {
-                Booking newBooking = new Booking();
-                newBooking.setBooker(waitlist.getAttendee());
-                newBooking.setEvent(event);
-                newBooking.setSeatsBooked(waitlist.getSeatsRequested());
-                newBooking.setStatus(BookingStatus.CONFIRMED);
-                newBooking.setBookingDate(LocalDateTime.now());
-
-                bookingRepository.save(newBooking);
-
-                event.setAvailableSeats(event.getAvailableSeats() - waitlist.getSeatsRequested());
-                waitlistRepository.delete(waitlist);
-            }
-        }
-
-        eventRepository.save(event);
-        bookingRepository.save(booking);
+        performCancelBooking(booking);
     }
 
     @Override
@@ -233,5 +169,14 @@ public class BookingServiceImpl implements BookingService {
                 .stream()
                 .map(bookingMapper::toResponseDTO)
                 .toList();
+    }
+
+    private void performCancelBooking(Booking booking) {
+        Event event = booking.getEvent();
+        event.setAvailableSeats(event.getAvailableSeats() + booking.getSeatsBooked());
+        booking.setStatus(BookingStatus.CANCELLED);
+        waitlistService.processWaitlist(event);
+        eventRepository.save(event);
+        bookingRepository.save(booking);
     }
 }

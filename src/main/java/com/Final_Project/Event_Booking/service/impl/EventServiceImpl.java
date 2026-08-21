@@ -152,6 +152,7 @@ public class EventServiceImpl implements EventService {
         )
                 .stream()
                 .map(event -> {
+                    updateEventStatus(event);
                     EventResponseDTO response=eventMapper.toResponseDTO(event);
                     response.setAverageRating(calculateAverageRating(event));
                 return response;
@@ -164,6 +165,7 @@ public class EventServiceImpl implements EventService {
         return eventRepository.findAll()
                 .stream()
                 .map(event -> {
+                    updateEventStatus(event);
                     EventResponseDTO response=eventMapper.toResponseDTO(event);
                     response.setAverageRating(calculateAverageRating(event));
                     return response;
@@ -182,6 +184,7 @@ public class EventServiceImpl implements EventService {
                 )
                 .stream()
                 .map(event ->{
+                    updateEventStatus(event);
                     EventResponseDTO response=eventMapper.toResponseDTO(event);
                     response.setAverageRating(calculateAverageRating(event));
                     return response;

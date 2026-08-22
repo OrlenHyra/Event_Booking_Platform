@@ -20,6 +20,7 @@ import com.Final_Project.Event_Booking.service.UserService;
 import com.Final_Project.Event_Booking.service.WaitlistService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -27,6 +28,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class BookingServiceImpl implements BookingService {
     private final BookingRepository bookingRepository;
     private final BookingMapper bookingMapper;
@@ -46,6 +48,8 @@ public class BookingServiceImpl implements BookingService {
         booking.setBookingDate(LocalDateTime.now());
 
         Booking savedBooking = bookingRepository.save(booking);
+        log.info("Booking created successfully. Booking id: {}, user id: {}, event id: {}, seats booked: {}",
+                savedBooking.getId(), user.getId(), event.getId(), request.getSeatsBooked());
         BookingResponseDTO response = bookingMapper.toResponseDTO(savedBooking);
         response.setMessage("Booking created successfully.");
 
@@ -67,12 +71,16 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public BookingCreationResponseDTO createBooking(BookingRequestDTO request) {
         User user = userService.getCurrentUser();
+        log.info("User id: {} attempting to book event id: {} for {} seats",
+                user.getId(), request.getEventId(), request.getSeatsBooked());
         Event event = eventRepository.findById(request.getEventId())
-                .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + request.getEventId() + " is not found!"));
+                .orElseThrow(() -> new ResourcesNotFoundException("Event with id:"+request.getEventId()+" is not found!"));
         validateEventForBooking(event);
         if (request.getSeatsBooked() <= event.getAvailableSeats()) {
             return createConfirmedBooking(request, user, event);
         }
+        log.warn("Insufficient seats for event id: {}. User id: {} requested: {}, available: {}. Adding to waitlist",
+                event.getId(), user.getId(), request.getSeatsBooked(), event.getAvailableSeats());
         return waitlistService.createWaitlist(user, event, request.getSeatsBooked());
     }
 
@@ -82,6 +90,8 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(()->new ResourcesNotFoundException("Booking with id:"+id+" is not found!"));
         User user = userService.getCurrentUser();
         if (user.getRole() == UserRole.ATTENDEE && !booking.getBooker().getId().equals(user.getId())) {
+            log.warn("User id: {} attempted to access booking id: {} without permission",
+                    user.getId(), id);
             throw new UnauthorizedAccessException("You are not allowed to view this booking!");
         }
         return bookingMapper.toResponseDTO(booking);
@@ -89,6 +99,7 @@ public class BookingServiceImpl implements BookingService {
 
     @Override
     public List<BookingResponseDTO> getAllBookings() {
+        log.info("Fetching all bookings");
         User user=userService.getCurrentUser();
         return bookingRepository.findAll()
                 .stream()
@@ -99,16 +110,20 @@ public class BookingServiceImpl implements BookingService {
     @Override
     @Transactional
     public void cancelBooking(Long id) {
+        log.info("Admin attempting to cancel booking id: {}", id);
         Booking booking = bookingRepository.findById(id)
                 .orElseThrow(() -> new ResourcesNotFoundException("Booking with id: " + id + " is not found!"));
         User user = userService.getCurrentUser();
         if (user.getRole() != UserRole.ADMIN) {
+            log.warn("User id: {} attempted to cancel booking id: {} without admin privileges",
+                    user.getId(), id);
             throw new UnauthorizedAccessException("Only admins are allowed to cancel bookings!");
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
             throw new BusinessRuleException("Only confirmed bookings can be cancelled!");
         }
         performCancelBooking(booking);
+        log.info("Booking id: {} cancelled successfully by admin id: {}", id, user.getId());
     }
 
     @Override
@@ -118,6 +133,8 @@ public class BookingServiceImpl implements BookingService {
                 .orElseThrow(() -> new ResourcesNotFoundException("Booking with id: " + id + " is not found!"));
         User user = userService.getCurrentUser();
         if (!booking.getBooker().getId().equals(user.getId())) {
+            log.warn("User id: {} attempted to cancel booking id: {} belonging to another user",
+                    user.getId(), id);
             throw new UnauthorizedAccessException("You are not allowed to cancel this booking!");
         }
         if (booking.getStatus() != BookingStatus.CONFIRMED) {
@@ -129,12 +146,14 @@ public class BookingServiceImpl implements BookingService {
             throw new BusinessRuleException("Bookings cannot be cancelled within 24 hours of the event!");
         }
         performCancelBooking(booking);
+        log.info("Booking id: {} cancelled successfully by user id: {}",
+                id, user.getId());
     }
 
     @Override
     public List<BookingResponseDTO> getMyBookings(BookingStatus status) {
         User user = userService.getCurrentUser();
-
+        log.info("Fetching bookings for user id: {}", user.getId());
         List<Booking> bookings;
 
         if(status!=null ){
@@ -155,9 +174,13 @@ public class BookingServiceImpl implements BookingService {
     @Override
     public List<BookingResponseDTO> getMyEventBookings(Long eventId) {
         User organizer = userService.getCurrentUser();
+        log.info("Organizer id: {} requesting bookings for event id: {}",
+                organizer.getId(), eventId);
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + eventId + " is not found!"));
         if (!event.getOrganizer().getId().equals(organizer.getId())) {
+            log.warn("User id: {} attempted to access bookings for event id: {} without being the organizer",
+                    organizer.getId(), eventId);
             throw new UnauthorizedAccessException(
                     "You are not allowed to view bookings for this event!"
             );

@@ -13,6 +13,7 @@ import com.Final_Project.Event_Booking.repository.UserRepository;
 import com.Final_Project.Event_Booking.security.jwt.JwtService;
 import com.Final_Project.Event_Booking.service.AuthService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
@@ -23,6 +24,7 @@ import org.springframework.stereotype.Service;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class AuthServiceImpl implements AuthService {
 
     private final AuthenticationManager authenticationManager;
@@ -33,7 +35,7 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public AuthResponseDTO login(LoginRequestDTO request) {
-
+        log.info("Login attempt for username: {}", request.getUsername());
         Authentication authentication =
                 authenticationManager.authenticate(
                         new UsernamePasswordAuthenticationToken(
@@ -54,6 +56,7 @@ public class AuthServiceImpl implements AuthService {
                         .getAuthority()
                         .replace("ROLE_", "")
         );
+        log.info("User {} logged in successfully with role {}", userDetails.getUsername(), userRole);
 
         return AuthResponseDTO.builder()
                 .username(userDetails.getUsername())
@@ -64,10 +67,13 @@ public class AuthServiceImpl implements AuthService {
 
     @Override
     public UserResponseDTO register(RegisterRequestDTO registerRequest) {
+        log.info("Registration attempt for username: {}", registerRequest.getUsername());
         if(userRepository.existsByUsername(registerRequest.getUsername())){
+            log.warn("Registration rejected: username {} already exists", registerRequest.getEmail());
             throw new UsernameAlreadyExistsException("Username already exists!");
         }
         if(userRepository.existsByEmail(registerRequest.getEmail())){
+            log.warn("Registration rejected: email {} already exists", registerRequest.getUsername());
             throw new EmailAlreadyExistsException("Email already exists!");
         }
         User user= userMapper.toEntity(registerRequest);
@@ -76,6 +82,7 @@ public class AuthServiceImpl implements AuthService {
         user.setActive(true);
 
         User savedUser=userRepository.save(user);
+        log.info("User registered successfully with id: {} and username: {}", savedUser.getId(), savedUser.getUsername());
         return userMapper.toResponseDTO(savedUser);
     }
 }

@@ -13,6 +13,7 @@ import com.Final_Project.Event_Booking.repository.BookingRepository;
 import com.Final_Project.Event_Booking.repository.WaitlistRepository;
 import com.Final_Project.Event_Booking.service.WaitlistService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -20,6 +21,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class WaitlistServiceImpl implements WaitlistService {
     private final WaitlistRepository waitlistRepository;
     private final WaitlistMapper waitlistMapper;
@@ -28,6 +30,8 @@ public class WaitlistServiceImpl implements WaitlistService {
 
     @Override
     public BookingCreationResponseDTO createWaitlist(User user, Event event, Integer seatsRequested) {
+        log.warn("User {} attempted to join waitlist for event {} but is already on the waitlist",
+                user.getId(), event.getId());
         if(waitlistRepository.existsByAttendee_IdAndEvent_Id(
                 user.getId(),
                 event.getId()
@@ -37,6 +41,8 @@ public class WaitlistServiceImpl implements WaitlistService {
         Waitlist waitlist=waitlistMapper.toEntity(user, event, seatsRequested);
         waitlist.setJoinedAt(LocalDateTime.now());
         Waitlist savedWaitlist=waitlistRepository.save(waitlist);
+        log.info("User {} added to waitlist for event {} with {} seats requested",
+                user.getId(), event.getId(), seatsRequested);
         WaitlistResponseDTO response = waitlistMapper.toResponseDTO(savedWaitlist);
         response.setMessage("Not enough seats,you have been added to the waitlist!");
 
@@ -48,6 +54,8 @@ public class WaitlistServiceImpl implements WaitlistService {
     @Override
     public void processWaitlist(Event event) {
         List<Waitlist> waitlistLists=waitlistRepository.findByEventInOrderByJoinedAtAsc(event.getId());
+        log.info("Processing waitlist for event {}. Available seats: {}, waiting users: {}",
+                event.getId(), event.getAvailableSeats(), waitlistLists.size());
         for(Waitlist waitlist : waitlistLists){
             if(event.getAvailableSeats()==0) {
                 break;
@@ -63,5 +71,8 @@ public class WaitlistServiceImpl implements WaitlistService {
         bookingRepository.save(booking);
         event.setAvailableSeats(event.getAvailableSeats()-waitlist.getSeatsRequested());
         waitlistRepository.delete(waitlist);
+        log.info("Waitlist entry {} converted to booking for user {} and event {}. Seats booked: {}",
+                waitlist.getId(), waitlist.getAttendee().getId(), event.getId(), waitlist.getSeatsRequested());
+    }
     }
 }

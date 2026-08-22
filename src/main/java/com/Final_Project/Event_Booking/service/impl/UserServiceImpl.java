@@ -13,6 +13,7 @@ import com.Final_Project.Event_Booking.model.mapper.UserMapper;
 import com.Final_Project.Event_Booking.repository.UserRepository;
 import com.Final_Project.Event_Booking.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class UserServiceImpl implements UserService {
     private final UserRepository userRepository;
     private final UserMapper userMapper;
@@ -28,6 +30,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDTO createUser(UserRequestDTO request) {
+        log.info("Creating new user with username: {}", request.getUsername());
         if(userRepository.existsByUsername(request.getUsername())){
             throw new UsernameAlreadyExistsException("Username already exists");
         }
@@ -37,11 +40,13 @@ public class UserServiceImpl implements UserService {
         User user = userMapper.toEntity(request);
         user.setPassword(passwordEncoder.encode(request.getPassword()));
         User savedUser=userRepository.save(user);
+        log.info("User created successfully with id: {} and username: {}", savedUser.getId(), savedUser.getUsername());
         return userMapper.toResponseDTO(savedUser);
     }
 
     @Override
     public List<UserResponseDTO> getAllUsers() {
+        log.info("Fetching all users");
         return userRepository.findAll()
                 .stream()
                 .map(userMapper::toResponseDTO)
@@ -50,6 +55,7 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDTO updateUser(Long id, UserRequestDTO request) {
+        log.info("Updating user with id: {}", id);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User not found"));
 
@@ -70,19 +76,23 @@ public class UserServiceImpl implements UserService {
         }
 
         User updatedUser = userRepository.save(user);
-
+        log.info("User with id: {} updated successfully", updatedUser.getId());
         return userMapper.toResponseDTO(updatedUser);
     }
 
     @Override
     public void deleteUser(Long id) {
+        log.info("Deleting user with id: {}", id);
         User user = userRepository.findById(id)
                 .orElseThrow(()->new UserNotFoundException("User not found!"));
         userRepository.delete(user);
+        log.info("User with id: {} deleted successfully", id);
+
     }
 
     @Override
     public UserResponseDTO updateRole(Long id, UserRole role) {
+        log.info("Updating role for user with id: {} to {}", id, role);
         User user = userRepository.findById(id)
                 .orElseThrow(()->new UserNotFoundException("User with id:"+id+" not found!"));
         if (role == UserRole.ADMIN) {
@@ -90,6 +100,7 @@ public class UserServiceImpl implements UserService {
         }
         user.setRole(role);
         User updatedUser=userRepository.save(user);
+        log.info("Role for user with id: {} updated successfully to {}", updatedUser.getId(), updatedUser.getRole());
         return userMapper.toResponseDTO(updatedUser);
     }
 
@@ -111,10 +122,12 @@ public class UserServiceImpl implements UserService {
 
     @Override
     public UserResponseDTO updateActiveStatus(Long id, boolean active) {
+        log.info("Updating active status for user with id: {} to {}", id, active);
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UserNotFoundException("User with id:"+id+" not found!"));
         user.setActive(active);
         User updatedUser = userRepository.save(user);
+        log.info("Active status for user with id: {} updated successfully to {}", updatedUser.getId(), updatedUser.isActive());
         return userMapper.toResponseDTO(updatedUser);
     }
 }

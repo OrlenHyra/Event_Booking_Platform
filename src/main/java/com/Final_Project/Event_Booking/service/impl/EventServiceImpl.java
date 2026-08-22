@@ -15,6 +15,7 @@ import com.Final_Project.Event_Booking.repository.VenueRepository;
 import com.Final_Project.Event_Booking.service.EventService;
 import com.Final_Project.Event_Booking.service.UserService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Page;
@@ -26,6 +27,7 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class EventServiceImpl implements EventService {
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
@@ -55,12 +57,16 @@ public class EventServiceImpl implements EventService {
 
             event.setStatus(EventStatus.ACTIVE);
             eventRepository.save(event);
+            log.info("Event with id: {} changed status from UPCOMING to ACTIVE",
+                    event.getId());
 
         } else if (event.getStatus() == EventStatus.ACTIVE
                 && !now.isBefore(event.getEndDateTime())) {
 
             event.setStatus(EventStatus.COMPLETED);
             eventRepository.save(event);
+            log.info("Event with id: {} changed status from ACTIVE to COMPLETED",
+                    event.getId());
         }
     }
 
@@ -77,6 +83,8 @@ public class EventServiceImpl implements EventService {
     @Override
     public EventResponseDTO createEvent(EventRequestDTO request) {
         User organizer = userService.getCurrentUser();
+        log.info("Creating event for organizer with id: {}",
+                organizer.getId());
 
         Venue venue = venueRepository.findById(request.getVenueId())
                 .orElseThrow(()-> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
@@ -106,17 +114,22 @@ public class EventServiceImpl implements EventService {
         event.setStatus(EventStatus.DRAFT);
 
         Event savedEvent = eventRepository.save(event);
+        log.info("Event created successfully with id: {} by organizer: {}",
+                savedEvent.getId(), organizer.getId());
 
         return eventMapper.toResponseDTO(savedEvent);
     }
 
     @Override
     public EventResponseDTO publishEvent(Long id) {
+        log.info("Attempting to publish event with id: {}", id);
         Event event = eventRepository.findById(id)
                 .orElseThrow(()->new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
         User user = userService.getCurrentUser();
 
         if(user.getRole()==UserRole.ORGANIZER && !userService.isCurrentUserOwner(event)){
+            log.warn("User with id: {} attempted to publish event {} without permission",
+                    user.getId(), id);
             throw new UnauthorizedAccessException("You are not allowed to publish this event!");
         }
         if(event.getStatus()!=EventStatus.DRAFT){
@@ -124,6 +137,8 @@ public class EventServiceImpl implements EventService {
         }
         event.setStatus(EventStatus.UPCOMING);
         Event publishedEvent=eventRepository.save(event);
+        log.info("Event with id: {} published successfully by user: {}",
+                id, user.getId());
         return eventMapper.toResponseDTO(publishedEvent);
     }
 
@@ -147,6 +162,7 @@ public class EventServiceImpl implements EventService {
     @Override
     public List<EventResponseDTO> getOrganizerEvents() {
         User user=userService.getCurrentUser();
+        log.info("Fetching events for organizer with id: {}", user.getId());
         return eventRepository.findByOrganizer_Id(
                 user.getId()
         )
@@ -162,6 +178,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventResponseDTO> getAllEventsForAdmin() {
+        log.info("Admin requested all events");
         return eventRepository.findAll()
                 .stream()
                 .map(event -> {
@@ -175,6 +192,7 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public List<EventResponseDTO> getAllEvents() {
+        log.info("Fetching all publicly available events");
         return eventRepository.findByStatusIn(
                 List.of(
                         EventStatus.ACTIVE,
@@ -206,12 +224,15 @@ public class EventServiceImpl implements EventService {
 
     @Override
     public EventResponseDTO updateEvent(Long id, EventRequestDTO request) {
+        log.info("Attempting to update event with id: {}", id);
         Event event = eventRepository.findById(id)
                 .orElseThrow(()-> new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
 
         User currentUser = userService.getCurrentUser();
 
         if (currentUser.getRole() == UserRole.ORGANIZER && !userService.isCurrentUserOwner(event)) {
+            log.warn("User with id: {} attempted to update event {} without permission",
+                    currentUser.getId(), id);
             throw new UnauthorizedAccessException("You are not allowed to update this event!");
         }
 
@@ -243,15 +264,20 @@ public class EventServiceImpl implements EventService {
         event.setCategories(categories);
 
         Event updatedEvent = eventRepository.save(event);
-
+        log.info("Event with id: {} updated successfully by user: {}",
+                id, currentUser.getId());
         return eventMapper.toResponseDTO(updatedEvent);
     }
 
     @Override
     public EventResponseDTO cancelEvent(Long id) {
+        log.info("Attempting to cancel event with id: {}", id);
         Event event = eventRepository.findById(id)
                 .orElseThrow(() -> new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
+        User currentUser = userService.getCurrentUser();
         if (!userService.isCurrentUserOwner(event)) {
+            log.warn("User with id: {} attempted to cancel event {} without permission",
+                    currentUser.getId(), id);
             throw new UnauthorizedAccessException("You are not allowed to cancel this event!");
         }
         if (event.getStatus() == EventStatus.CANCELLED) {
@@ -262,11 +288,14 @@ public class EventServiceImpl implements EventService {
         }
         event.setStatus(EventStatus.CANCELLED);
         Event cancelledEvent=eventRepository.save(event);
+        log.info("Event with id: {} cancelled successfully by user: {}",
+                id, currentUser.getId());
         return eventMapper.toResponseDTO(cancelledEvent);
     }
 
     @Override
     public Page<EventResponseDTO> getEventsByCategory(String categoryName, Pageable pageable) {
+        log.info("Searching events by category: {}", categoryName);
         Page<Event> events=eventRepository.findByStatusInAndCategories_Name(
                 List.of(
                         EventStatus.ACTIVE,
@@ -276,11 +305,14 @@ public class EventServiceImpl implements EventService {
                 categoryName,
                 pageable
         );
+        log.info("Found {} events for category: {}",
+                events.getTotalElements(), categoryName);
         return events.map(eventMapper::toResponseDTO);
     }
 
     @Override
     public Page<EventResponseDTO> getEventsByCity(String cityName,Pageable pageable) {
+        log.info("Searching events by city: {}", cityName);
         Page<Event> events=eventRepository.findByStatusInAndVenue_City(
                 List.of(
                         EventStatus.ACTIVE,
@@ -290,11 +322,15 @@ public class EventServiceImpl implements EventService {
                 cityName,
                 pageable
         );
+        log.info("Found {} events for city: {}",
+                events.getTotalElements(), cityName);
         return events.map(eventMapper::toResponseDTO);
     }
 
     @Override
     public Page<EventResponseDTO> filterByDateRange(LocalDateTime startDateTime, LocalDateTime endDateTime,Pageable pageable) {
+        log.info("Filtering events by date range: {} to {}",
+                startDateTime, endDateTime);
         Page<Event> events=eventRepository.findEventByDateRange(
                 List.of(
                         EventStatus.ACTIVE,
@@ -305,14 +341,20 @@ public class EventServiceImpl implements EventService {
                 endDateTime,
                 pageable
         );
+        log.info("Found {} events in requested date range",
+                events.getTotalElements());
         return events.map(eventMapper::toResponseDTO);
     }
 
     @Override
     public Page<EventResponseDTO> filterByPriceRange(BigDecimal minPrice, BigDecimal maxPrice,Pageable pageable) {
+        log.info("Filtering events by price range: {} to {}",
+                minPrice, maxPrice);
         Page<Event> events =eventRepository.findEventByPriceRange(
                 minPrice,maxPrice,pageable
         );
+        log.info("Found {} events in requested price range",
+                events.getTotalElements());
         return events.map(eventMapper::toResponseDTO);
     }
 }

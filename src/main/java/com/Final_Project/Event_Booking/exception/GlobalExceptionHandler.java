@@ -2,6 +2,7 @@ package com.Final_Project.Event_Booking.exception;
 
 import com.Final_Project.Event_Booking.exception.custom.*;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -10,9 +11,15 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import java.time.LocalDateTime;
 
 @RestControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneric(Exception ex, HttpServletRequest request) {
+        log.error("Unexpected error on {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage(),
+                ex);
         ErrorResponse body = ErrorResponse.builder()
                 .status(HttpStatus.INTERNAL_SERVER_ERROR.value())
                 .error(HttpStatus.INTERNAL_SERVER_ERROR.getReasonPhrase())
@@ -27,7 +34,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(EmailAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleEmailAlreadyExists(EmailAlreadyExistsException ex, HttpServletRequest request) {
-
+        log.warn("Email already exists - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
@@ -43,7 +53,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UsernameAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleUsernameAlreadyExists(UsernameAlreadyExistsException ex, HttpServletRequest request) {
-
+        log.warn("Username already exists - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
@@ -59,7 +72,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleUserNotFound(UserNotFoundException ex, HttpServletRequest request) {
-
+        log.warn("User not found - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
@@ -75,7 +91,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidRoleException.class)
     public ResponseEntity<ErrorResponse> handleInvalidRole(InvalidRoleException ex, HttpServletRequest request) {
-
+        log.warn("Invalid role - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
@@ -91,7 +110,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourcesNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(ResourcesNotFoundException ex, HttpServletRequest request) {
-
+        log.warn("Resource not found - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.NOT_FOUND.value())
@@ -107,7 +129,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ResourceAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleAlreadyExists(ResourceAlreadyExistsException ex, HttpServletRequest request) {
-
+        log.warn("Resource already exists - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.CONFLICT.value())
@@ -123,7 +148,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(BusinessRuleException.class)
     public ResponseEntity<ErrorResponse> handleBusinessRule(BusinessRuleException ex, HttpServletRequest request) {
-
+        log.warn("Business rule violation - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.BAD_REQUEST.value())
@@ -139,7 +167,10 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(UnauthorizedAccessException.class)
     public ResponseEntity<ErrorResponse> handleUnauthorized(UnauthorizedAccessException ex, HttpServletRequest request) {
-
+        log.warn("Unauthorized access - {} {}: {}",
+                request.getMethod(),
+                request.getRequestURI(),
+                ex.getMessage());
         ErrorResponse body = ErrorResponse.builder()
                 .timestamp(LocalDateTime.now())
                 .status(HttpStatus.FORBIDDEN.value())

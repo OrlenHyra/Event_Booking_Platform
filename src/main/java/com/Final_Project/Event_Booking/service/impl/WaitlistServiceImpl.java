@@ -74,5 +74,4 @@ public class WaitlistServiceImpl implements WaitlistService {
         log.info("Waitlist entry {} converted to booking for user {} and event {}. Seats booked: {}",
                 waitlist.getId(), waitlist.getAttendee().getId(), event.getId(), waitlist.getSeatsRequested());
     }
-    }
 }

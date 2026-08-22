@@ -4,7 +4,7 @@ EventBooking is a Spring Boot backend system for an event booking platform.
 
 ## Technologies
 
-* Java
+* Java 17+
 * Spring Boot
 * Maven
 * Spring Web
@@ -15,83 +15,38 @@ EventBooking is a Spring Boot backend system for an event booking platform.
 * MapStruct
 * Lombok
 * Swagger / OpenAPI
-
-## Current Features
-
-The following functionality has currently been implemented:
-
-* User registration
-* User login
-* JWT-based authentication
-* Role-based authorization
-* ADMIN role management
-* User management
-* Venue management
-
-## Roles
-
-The application currently supports three user roles:
-
-* `ADMIN`
-* `ORGANIZER`
-* `ATTENDEE`
-
-Administrative endpoints are protected using Spring Security and role-based authorization.
-
-For example:
-
-```text
-@PreAuthorize("hasRole('ADMIN')")
-```
+* Log4j2
 
 ## Requirements
 
-Before running the application, make sure you have:
+Before setting up the project, make sure you have:
 
-* Java installed (17 or above)
-* Maven installed
-* MySQL installed and running
-* Git installed
+* **Java 17+**
+* **Maven**
+* **MySQL**
+* **Git**
+* **Postman** (optional)
 
-## Database Setup
+## 1. Clone the Repository
 
-Create a MySQL database for the application.
+```bash
+git clone https://github.com/OrlenHyra/Event_Booking_Platform.git
+cd Event_Booking
+```
 
-Example:
+## 2. Configure the Database
+
+Start MySQL and create the databases:
 
 ```sql
 CREATE DATABASE event_booking_db;
+CREATE DATABASE event_booking_test_db;
+CREATE DATABASE event_booking_prod_db;
 ```
 
-Database connection details are provided through the application's configuration.
+## 3. Configure Environment Variables
 
-## Environment Variables
-
-Sensitive configuration is kept outside the source code.
-
-The JWT secret is provided through an environment variable:
-
-```text
-JWT_SECRET=your-generated-secret
-```
-
-The application reads the secret through the Spring configuration:
-
-```text
-jwt.secret=${JWT_SECRET}
-```
-
-### Creating the JWT Secret
-
-A secure JWT secret can be generated using PowerShell:
-
-```powershell
-[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
-```
-
-Copy the generated value and add it to the `.env` file.
-
-The `.env` file should be located in the root directory of the project.
+Create a `.env` file in the root directory:
 
 ```text
 Event_Booking/
@@ -105,83 +60,160 @@ The `.env` file should contain:
 
 ```text
 JWT_SECRET=your-generated-secret
+JWT_EXPIRATION_MS=3600000
+
+DB_USERNAME=root
+DB_PASSWORD=your-database-password
 ```
 
-The real JWT secret should **never be committed to the Git repository**.
+The application uses these variables for the JWT and database configuration.
 
-Make sure `.env` is included in `.gitignore`:
+### Generate JWT Secret
+
+A JWT secret can be generated using PowerShell:
+
+```powershell
+[Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Maximum 256 }))
+```
+
+Copy the generated value into `.env`.
+
+The `.env` file should not be committed to Git.
+
+Make sure `.gitignore` contains:
 
 ```text
 .env
+/logs
 ```
 
-> Note: Spring Boot does not automatically load `.env` files by default. The `JWT_SECRET` environment variable must be available to the application through the environment or the IDE's run configuration.
+> Note: Spring Boot does not automatically load `.env` files. The variables must be available through the environment or the IDE run configuration.
 
-## Running the Application
+## 4. Application Profiles
 
-Clone the repository:
+The project has separate configurations for the different environments.
 
-```bash
-git clone https://github.com/OrlenHyra/Event_Booking_Platform.git
+### Default
+
+```text
+Database: event_booking_db
+Port: 8080
 ```
 
-Navigate into the project:
+### Test
 
-```bash
-cd Event_Booking
+```text
+Database: event_booking_test_db
+Port: 8082
 ```
 
-Build the project:
+### Production
+
+```text
+Database: event_booking_prod_db
+Port: 8081
+```
+
+## 5. Install Dependencies
+
+Run:
 
 ```bash
 mvn clean install
 ```
 
-Run the application:
+## 6. Run the Application
 
 ```bash
 mvn spring-boot:run
 ```
 
-## Authentication
+## 7. Authentication
 
-Unauthenticated users can register through the authentication API:
+Register:
 
 ```text
 POST /api/auth/register
 ```
 
-Users can log in through:
+Login:
 
 ```text
 POST /api/auth/login
 ```
 
-A successful login returns a JWT token.
+The login endpoint returns a JWT token.
 
-The token must be included when accessing protected endpoints:
+For protected endpoints, use:
 
 ```text
 Authorization: Bearer <JWT_TOKEN>
 ```
 
-## Administrator
+## 8. User Roles
 
-An initial administrator can be created automatically using the application's admin seeder.
+The application supports:
 
-The administrator can access protected administrative functionality, including user and venue management.
+* `ADMIN`
+* `ORGANIZER`
+* `ATTENDEE`
 
-## API Documentation
+Role-based authorization is handled by Spring Security.
 
-Swagger/OpenAPI is used to document the API.
+Example:
 
-Once the application is running, Swagger UI can be accessed through the configured Swagger endpoint.
+```java
+@PreAuthorize("hasRole('ADMIN')")
+```
+
+## 9. Main Features
+
+* User registration and login
+* JWT authentication
+* Role-based authorization
+* User management
+* User activation/deactivation
+* Venue management
+* Category management
+* Event management
+* Event publishing and cancellation
+* Event searching and filtering
+* Event reviews and ratings
+* Event bookings
+* Booking cancellation
+* Waitlist management
+* Business rule validation
+* Global exception handling
+* Swagger/OpenAPI
+* Log4j2 logging
+
+## 10. Administrator
+
+An initial administrator is created using the application's admin seeder.
+
+The administrator can access protected administrative endpoints.
+
+## 11. API Documentation
+
+Swagger/OpenAPI is used for API documentation.
+
+Swagger UI is available when the application is running.
 
 Protected endpoints require a valid JWT token.
 
-## Project Structure
+## 12. Logging
 
-The application follows a layered architecture:
+The application uses **Log4j2**.
+
+Logs are stored in:
+
+```text
+logs/application.log
+```
+
+The `logs` folder is included in `.gitignore`.
+
+## 13. Project Structure
 
 ```text
 Controller
@@ -193,9 +225,7 @@ Repository
 Database
 ```
 
-DTOs and mappers are used to separate API models from JPA entities.
-
-The main package structure includes:
+Main packages:
 
 ```text
 config
@@ -207,8 +237,37 @@ security
 service
 ```
 
-## Current Development Status
+## 14. API Testing
 
-The project is currently under development.
+Postman can be used to test the APIs.
 
-Implemented modules will be expanded with the remaining EventBooking functionality, including events, bookings, reviews, advanced business rules, testing, logging, and environment profiles.
+For protected endpoints:
+
+1. Login.
+2. Copy the JWT token.
+3. Add it as a Bearer token in the request.
+
+A Postman collection can be used to save and organize the API requests.
+
+## 15. Stopping the Application
+
+If running with Maven:
+
+```text
+CTRL + C
+```
+
+## 16. Common Issues
+
+**Database Connection Failure:**
+Make sure MySQL is running and the database credentials are correct.
+
+**JWT Authentication Failure:**
+Make sure `JWT_SECRET` is correctly configured.
+
+**Port Conflict:**
+Change the port in the appropriate application profile.
+
+---
+
+**The EventBooking backend is ready to use! 🚀**

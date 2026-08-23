@@ -36,7 +36,6 @@ public class EventServiceImpl implements EventService {
     private final CategoryRepository categoryRepository;
     private final UserService userService;
 
-
     private Double calculateAverageRating(Event event){
         if(event.getReviews() == null || event.getReviews().isEmpty()){
             return null;
@@ -80,30 +79,38 @@ public class EventServiceImpl implements EventService {
             throw new BusinessRuleException("The venue already has another event during the selected time!");
         }
     }
-    @Override
-    public EventResponseDTO createEvent(EventRequestDTO request) {
-        User organizer = userService.getCurrentUser();
-        log.info("Creating event for organizer with id: {}",
-                organizer.getId());
 
-        Venue venue = venueRepository.findById(request.getVenueId())
-                .orElseThrow(()-> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
-
-        if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
+    private void validateDateTime(LocalDateTime startDateTime, LocalDateTime endDateTime) {
+        if (!startDateTime.isBefore(endDateTime)) {
             throw new BusinessRuleException("Start date and time must be before the end date and time!");
         }
+    }
 
+    private void validateCreate(EventRequestDTO request) {
+        validateDateTime(request.getStartDateTime(), request.getEndDateTime());
+        Venue venue = venueRepository.findById(request.getVenueId())
+                .orElseThrow(() -> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
         if (request.getTotalSeats() > venue.getCapacity()) {
             throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
         }
-
-        checkVenueAvailability(venue, request.getStartDateTime(), request.getEndDateTime());
-
+        checkVenueAvailability(
+                venue,
+                request.getStartDateTime(),
+                request.getEndDateTime()
+        );
         List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
-
         if (categories.size() != request.getCategoryIds().size()) {
             throw new ResourcesNotFoundException("One or more categories were not found!");
         }
+    }
+    @Override
+    public EventResponseDTO createEvent(EventRequestDTO request) {
+        User organizer = userService.getCurrentUser();
+        log.info("Creating event for organizer with id: {}", organizer.getId());
+        validateCreate(request);
+        Venue venue = venueRepository.findById(request.getVenueId())
+                .orElseThrow(() -> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
+        List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
 
         Event event = eventMapper.toEntity(request);
 
@@ -114,6 +121,7 @@ public class EventServiceImpl implements EventService {
         event.setStatus(EventStatus.DRAFT);
 
         Event savedEvent = eventRepository.save(event);
+
         log.info("Event created successfully with id: {} by organizer: {}",
                 savedEvent.getId(), organizer.getId());
 
@@ -222,48 +230,49 @@ public class EventServiceImpl implements EventService {
         }
     }
 
+    private void validateUpdate(Event event, EventRequestDTO request, User currentUser) {
+        if (currentUser.getRole() == UserRole.ORGANIZER && !userService.isCurrentUserOwner(event)) {
+            log.warn("User with id: {} attempted to update event {} without permission",
+                    currentUser.getId(), event.getId());
+            throw new UnauthorizedAccessException("You are not allowed to update this event!");
+        }
+        if (event.getStatus() != EventStatus.DRAFT) {
+            throw new BusinessRuleException("Only draft events can be updated!");
+        }
+        validateDateTime(request.getStartDateTime(), request.getEndDateTime());
+        Venue venue = venueRepository.findById(request.getVenueId())
+                .orElseThrow(() -> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
+        if (request.getTotalSeats() > venue.getCapacity()) {
+            throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
+        }
+        checkVenueAvailabilityForUpdate(
+                event.getId(),
+                venue,
+                request.getStartDateTime(),
+                request.getEndDateTime()
+        );
+        List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
+        if (categories.size() != request.getCategoryIds().size()) {
+            throw new ResourcesNotFoundException("One or more categories were not found!");
+        }
+    }
     @Override
     public EventResponseDTO updateEvent(Long id, EventRequestDTO request) {
         log.info("Attempting to update event with id: {}", id);
         Event event = eventRepository.findById(id)
-                .orElseThrow(()-> new ResourcesNotFoundException("Event with id:"+id+" is not found!"));
-
+                .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + id + " is not found!"));
         User currentUser = userService.getCurrentUser();
-
-        if (currentUser.getRole() == UserRole.ORGANIZER && !userService.isCurrentUserOwner(event)) {
-            log.warn("User with id: {} attempted to update event {} without permission",
-                    currentUser.getId(), id);
-            throw new UnauthorizedAccessException("You are not allowed to update this event!");
-        }
-
-        if (event.getStatus() != EventStatus.DRAFT && event.getStatus() != EventStatus.UPCOMING) {
-            throw new BusinessRuleException("Only draft or upcoming events can be updated!");
-        }
-
-        if (!request.getStartDateTime().isBefore(request.getEndDateTime())) {
-            throw new BusinessRuleException("Start date and time must be before the end date and time!");
-        }
-
+        validateUpdate(event, request, currentUser);
         Venue venue = venueRepository.findById(request.getVenueId())
-                .orElseThrow(()-> new ResourcesNotFoundException("Venue with id:"+request.getVenueId()+" is not found!"));
-
-        if (request.getTotalSeats() > venue.getCapacity()) {
-            throw new BusinessRuleException("Total seats cannot exceed the venue capacity!");
-        }
-
-        checkVenueAvailabilityForUpdate(event.getId(), venue, request.getStartDateTime(), request.getEndDateTime());
-
-        List<Category> categories=categoryRepository.findAllById(request.getCategoryIds());
-
-        if (categories.size() != request.getCategoryIds().size()) {
-            throw new ResourcesNotFoundException("One or more categories were not found!");
-        }
+                .orElseThrow(() -> new ResourcesNotFoundException("Venue with id:" + request.getVenueId() + " is not found!"));
+        List<Category> categories = categoryRepository.findAllById(request.getCategoryIds());
 
         eventMapper.updateEntity(request, event);
         event.setVenue(venue);
         event.setCategories(categories);
 
         Event updatedEvent = eventRepository.save(event);
+
         log.info("Event with id: {} updated successfully by user: {}",
                 id, currentUser.getId());
         return eventMapper.toResponseDTO(updatedEvent);

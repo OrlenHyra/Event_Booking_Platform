@@ -34,42 +34,47 @@ public class ReviewServiceImpl implements ReviewService {
     private final EventRepository eventRepository;
     private final BookingRepository bookingRepository;
 
-    @Override
-    public ReviewResponseDTO createReview(ReviewRequestDTO request) {
-        User user=userService.getCurrentUser();
-        if(user.getRole()!= UserRole.ATTENDEE){
+    private void validateCreateReview(User user, Event event) {
+        if (user.getRole() != UserRole.ATTENDEE) {
             log.warn("User {} attempted to create a review without ATTENDEE role", user.getId());
             throw new UnauthorizedAccessException("Only attendees can create reviews!");
         }
-        Event event=eventRepository.findById(request.getEventId())
-                .orElseThrow(()->new ResourcesNotFoundException("Event with id:"+request.getEventId()+" is not found"));
-        if(!LocalDateTime.now().isAfter(event.getEndDateTime())){
+        if (!LocalDateTime.now().isAfter(event.getEndDateTime())) {
             log.warn("User {} attempted to review event {} before the event ended", user.getId(), event.getId());
             throw new BusinessRuleException("Cant review an event if it has not ended yet.");
         }
-        boolean hasBooking=bookingRepository.existsByBooker_IdAndEvent_IdAndStatus(
+        boolean hasBooking = bookingRepository.existsByBooker_IdAndEvent_IdAndStatus(
                 user.getId(),
                 event.getId(),
                 BookingStatus.CONFIRMED
         );
-        if(!hasBooking){
-            log.warn("User {} attempted to review event {} without a confirmed booking",
-                    user.getId(), event.getId());
+        if (!hasBooking) {
+            log.warn("User {} attempted to review event {} without a confirmed booking", user.getId(), event.getId());
             throw new BusinessRuleException("Cant review an event if you dont have a booking!");
         }
-        boolean isReviewed=reviewRepository.existsByReviewer_IdAndEvent_Id(
+        boolean isReviewed = reviewRepository.existsByReviewer_IdAndEvent_Id(
                 user.getId(),
                 event.getId()
         );
-        if(isReviewed){
+        if (isReviewed) {
             throw new BusinessRuleException("Cant review an event that you already reviewed before!");
         }
-        Review review=reviewMapper.toEntity(request);
+    }
+
+    @Override
+    public ReviewResponseDTO createReview(ReviewRequestDTO request) {
+        User user = userService.getCurrentUser();
+        Event event = eventRepository.findById(request.getEventId())
+                .orElseThrow(() -> new ResourcesNotFoundException("Event with id:" + request.getEventId() + " is not found"));
+        validateCreateReview(user, event);
+
+        Review review = reviewMapper.toEntity(request);
         review.setReviewer(user);
         review.setEvent(event);
         review.setCreatedAt(LocalDateTime.now());
 
-        Review savedReview=reviewRepository.save(review);
+        Review savedReview = reviewRepository.save(review);
+
         log.info("User {} successfully created review {} for event {} with rating {}",
                 user.getId(), savedReview.getId(), event.getId(), savedReview.getRating());
         return reviewMapper.toResponseDTO(savedReview);
@@ -102,8 +107,7 @@ public class ReviewServiceImpl implements ReviewService {
         }
         reviewMapper.updateEntity(request,review);
         Review updatedReview=reviewRepository.save(review);
-        log.info("User {} successfully updated review {}",
-                user.getId(), id);
+        log.info("User {} successfully updated review {}", user.getId(), id);
         return reviewMapper.toResponseDTO(updatedReview);
     }
 

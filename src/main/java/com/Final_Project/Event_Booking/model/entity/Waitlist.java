@@ -1,5 +1,6 @@
 package com.Final_Project.Event_Booking.model.entity;
 
+import com.Final_Project.Event_Booking.model.enums.WaitlistStatus;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -30,6 +31,10 @@ public class Waitlist {
 
     @Column(name = "seats_requested", nullable = false)
     private Integer seatsRequested;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "status", nullable = false)
+    private WaitlistStatus status;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "event_id",referencedColumnName = "id",nullable = false)

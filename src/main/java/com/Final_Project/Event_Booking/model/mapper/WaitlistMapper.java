@@ -17,5 +17,6 @@ public interface WaitlistMapper {
     @Mapping(target = "attendee", source = "user")
     @Mapping(target = "event", source = "event")
     @Mapping(target = "seatsRequested", source = "seatsRequested")
+    @Mapping(target = "status", constant = "WAITING")
     Waitlist toEntity(User user, Event event, Integer seatsRequested);
 }

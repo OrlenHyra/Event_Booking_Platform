@@ -7,6 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 public interface WaitlistRepository extends JpaRepository<Waitlist,Long> {
     boolean existsByAttendee_IdAndEvent_Id(Long attendeeId, Long eventId);
@@ -26,4 +27,8 @@ public interface WaitlistRepository extends JpaRepository<Waitlist,Long> {
     List<Waitlist> findByStatus(WaitlistStatus status);
 
     List<Waitlist> findByEvent_Id(Long eventId);
+
+    Optional<Waitlist> findByAttendee_IdAndEvent_Id(Long attendeeId, Long eventId);
+
+    boolean existsByAttendee_IdAndEvent_IdAndStatus(Long attendeeId, Long eventId, WaitlistStatus status);
 }

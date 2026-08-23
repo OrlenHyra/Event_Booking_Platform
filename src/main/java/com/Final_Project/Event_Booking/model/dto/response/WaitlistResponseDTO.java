@@ -1,5 +1,6 @@
 package com.Final_Project.Event_Booking.model.dto.response;
 
+import com.Final_Project.Event_Booking.model.enums.WaitlistStatus;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -21,4 +22,6 @@ public class WaitlistResponseDTO {
     private LocalDateTime joinedAt;
 
     private String message;
+
+    private WaitlistStatus status;
 }

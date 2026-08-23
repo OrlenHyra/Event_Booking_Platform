@@ -38,19 +38,25 @@ public class WaitlistServiceImpl implements WaitlistService {
 
     @Override
     public BookingCreationResponseDTO createWaitlist(User user, Event event, Integer seatsRequested) {
-        log.warn("User {} attempted to join waitlist for event {} but is already on the waitlist",
-                user.getId(), event.getId());
-        if(waitlistRepository.existsByAttendee_IdAndEvent_Id(
-                user.getId(),
-                event.getId()
-        )){
+        boolean alreadyWaiting = waitlistRepository.existsByAttendee_IdAndEvent_IdAndStatus(
+                user.getId(), event.getId(), WaitlistStatus.WAITING);
+        if (alreadyWaiting) {
+            log.warn("User {} attempted to join waitlist for event {} but is already on the waitlist",
+                    user.getId(), event.getId());
             throw new BusinessRuleException("You are already on the waitlist for this event!");
         }
-        Waitlist waitlist=waitlistMapper.toEntity(user, event, seatsRequested);
+
+        Waitlist waitlist = waitlistRepository.findByAttendee_IdAndEvent_Id(user.getId(), event.getId())
+                .orElseGet(() -> waitlistMapper.toEntity(user, event, seatsRequested));
+
+        waitlist.setSeatsRequested(seatsRequested);
+        waitlist.setStatus(WaitlistStatus.WAITING);
         waitlist.setJoinedAt(LocalDateTime.now());
-        Waitlist savedWaitlist=waitlistRepository.save(waitlist);
+
+        Waitlist savedWaitlist = waitlistRepository.save(waitlist);
         log.info("User {} added to waitlist for event {} with {} seats requested",
                 user.getId(), event.getId(), seatsRequested);
+
         WaitlistResponseDTO response = waitlistMapper.toResponseDTO(savedWaitlist);
         response.setMessage("Not enough seats,you have been added to the waitlist!");
 

@@ -91,8 +91,10 @@ class WaitlistServiceImplTest {
     void createsWaitlistSuccessfully() {
         Waitlist mappedWaitlist = new Waitlist();
 
-        when(waitlistRepository.existsByAttendee_IdAndEvent_Id(1L, 10L))
+        when(waitlistRepository.existsByAttendee_IdAndEvent_IdAndStatus(1L, 10L, WaitlistStatus.WAITING))
                 .thenReturn(false);
+        when(waitlistRepository.findByAttendee_IdAndEvent_Id(1L, 10L))
+                .thenReturn(Optional.empty());
         when(waitlistMapper.toEntity(attendee, event, 3))
                 .thenReturn(mappedWaitlist);
         when(waitlistRepository.save(mappedWaitlist))
@@ -107,11 +109,13 @@ class WaitlistServiceImplTest {
         assertThat(response.getWaitlist().getMessage())
                 .isEqualTo("Not enough seats,you have been added to the waitlist!");
         assertThat(mappedWaitlist.getJoinedAt()).isNotNull();
+        assertThat(mappedWaitlist.getStatus()).isEqualTo(WaitlistStatus.WAITING);
+        assertThat(mappedWaitlist.getSeatsRequested()).isEqualTo(3);
     }
 
     @Test
     void cannotJoinWaitlistTwice() {
-        when(waitlistRepository.existsByAttendee_IdAndEvent_Id(1L, 10L))
+        when(waitlistRepository.existsByAttendee_IdAndEvent_IdAndStatus(1L, 10L, WaitlistStatus.WAITING))
                 .thenReturn(true);
 
         assertThatThrownBy(() ->
@@ -119,6 +123,7 @@ class WaitlistServiceImplTest {
                 .isInstanceOf(BusinessRuleException.class);
 
         verify(waitlistRepository, never()).save(any());
+        verify(waitlistRepository, never()).findByAttendee_IdAndEvent_Id(any(), any());
     }
 
     @Test
